@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Site Editor | Padre Garcia{% endblock %}
+
+{% block head %}
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.1.0/remixicon.min.css" rel="stylesheet">
+<style>.default-nav { display: none !important; }</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-100 flex flex-col md:flex-row font-sans">
+    
+    <!-- Sidebar -->
+    <aside class="w-full md:w-64 bg-slate-900 text-white flex-shrink-0">
+        <div class="p-6 border-b border-slate-700">
+            <h2 class="text-xl font-bold text-yellow-500 flex items-center gap-2">
+                <i class="ri-edit-circle-line"></i> Site Editor
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Admin: {{ user.first_name }}</p>
+        </div>
+        <nav class="p-4 space-y-2">
+            <a href="{{ url_for('views.home') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300 transition">
+                <i class="ri-eye-line"></i> View Live Site
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-900/30 text-red-400 transition mt-auto">
+                <i class="ri-logout-box-line"></i> Logout
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8 overflow-y-auto">
+        <div class="max-w-5xl mx-auto">
+            <h1 class="text-3xl font-bold text-slate-800 mb-8">Content Management</h1>
+
+            <!-- ========================= 
+                 SECTION 1: GENERAL CONTENT FORM 
+                 ========================= -->
+            <form method="POST" enctype="multipart/form-data" class="space-y-8">
+                <input type="hidden" name="update_content" value="true">
+
+                <!-- 1. HERO SECTION -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                        <i class="ri-home-4-line text-blue-500"></i> Hero Section
+                    </h3>
+                    <div class="mb-4 bg-slate-50 p-4 rounded border">
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Background Image</label>
+                        <input type="file" name="hero_image_file" accept="image/*" class="w-full text-sm">
+                        {% if content.hero_image_path %}<p class="text-xs text-green-600 mt-1"><i class="ri-check-line"></i> Image set</p>{% endif %}
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div><label class="label-xs">Title (Left)</label><input type="text" name="hero_title_1" value="{{ content.hero_title_1 }}" class="input-std"></div>
+                        <div><label class="label-xs">Title (Right)</label><input type="text" name="hero_title_2" value="{{ content.hero_title_2 }}" class="input-std"></div>
+                    </div>
+                    <div><label class="label-xs">Subtitle</label><textarea name="hero_subtitle" rows="2" class="input-std">{{ content.hero_subtitle }}</textarea></div>
+                </div>
+
+                <!-- 2. ABOUT SECTION -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                        <i class="ri-information-line text-blue-500"></i> About Section
+                    </h3>
+                    <div class="mb-4 bg-slate-50 p-4 rounded border">
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-2">About Section Image</label>
+                        <input type="file" name="about_image_file" accept="image/*" class="w-full text-sm">
+                        {% if content.about_image_path %}<p class="text-xs text-green-600 mt-1"><i class="ri-check-line"></i> Image set</p>{% endif %}
+                    </div>
+                    <div class="mb-4"><label class="label-xs">Title</label><input type="text" name="about_title" value="{{ content.about_title }}" class="input-std"></div>
+                    <div><label class="label-xs">Description</label><textarea name="about_text" rows="4" class="input-std">{{ content.about_text }}</textarea></div>
+                </div>
+
+                <!-- 3. TRAVEL ESSENTIALS -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                        <i class="ri-suitcase-line text-blue-500"></i> Travel Essentials
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-slate-50 p-3 rounded">
+                            <span class="text-xs font-bold text-yellow-600 block mb-2">Card 1</span>
+                            <input type="text" name="travel_title_1" value="{{ content.travel_title_1 }}" class="input-std mb-2" placeholder="Title">
+                            <textarea name="travel_text_1" rows="3" class="input-std" placeholder="Text">{{ content.travel_text_1 }}</textarea>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded">
+                            <span class="text-xs font-bold text-blue-600 block mb-2">Card 2</span>
+                            <input type="text" name="travel_title_2" value="{{ content.travel_title_2 }}" class="input-std mb-2" placeholder="Title">
+                            <textarea name="travel_text_2" rows="3" class="input-std" placeholder="Text">{{ content.travel_text_2 }}</textarea>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded">
+                            <span class="text-xs font-bold text-green-600 block mb-2">Card 3</span>
+                            <input type="text" name="travel_title_3" value="{{ content.travel_title_3 }}" class="input-std mb-2" placeholder="Title">
+                            <textarea name="travel_text_3" rows="3" class="input-std" placeholder="Text">{{ content.travel_text_3 }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. FOOTER / CONTACT -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                        <i class="ri-layout-bottom-line text-blue-500"></i> Footer & Contact
+                    </h3>
+                    <div class="mb-4 bg-slate-50 p-3 rounded">
+                        <label class="label-xs text-blue-600">Column 1: Brand Info</label>
+                        <input type="text" name="footer_brand_title" value="{{ content.footer_brand_title }}" class="input-std mb-2" placeholder="Brand Title">
+                        <textarea name="footer_brand_desc" rows="2" class="input-std" placeholder="Brand Description">{{ content.footer_brand_desc }}</textarea>
+                    </div>
+                    <div class="mb-4 bg-slate-50 p-3 rounded">
+                        <label class="label-xs text-blue-600">Column 2: Quick Links</label>
+                        <input type="text" name="footer_links_title" value="{{ content.footer_links_title }}" class="input-std mb-2 font-bold" placeholder="Section Title">
+                        <div class="grid grid-cols-2 gap-2 mb-1">
+                            <input type="text" name="footer_link1_text" value="{{ content.footer_link1_text }}" class="input-std" placeholder="Link 1 Text">
+                            <input type="text" name="footer_link1_url" value="{{ content.footer_link1_url }}" class="input-std" placeholder="Link 1 URL">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mb-1">
+                            <input type="text" name="footer_link2_text" value="{{ content.footer_link2_text }}" class="input-std" placeholder="Link 2 Text">
+                            <input type="text" name="footer_link2_url" value="{{ content.footer_link2_url }}" class="input-std" placeholder="Link 2 URL">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" name="footer_link3_text" value="{{ content.footer_link3_text }}" class="input-std" placeholder="Link 3 Text">
+                            <input type="text" name="footer_link3_url" value="{{ content.footer_link3_url }}" class="input-std" placeholder="Link 3 URL">
+                        </div>
+                    </div>
+                    <div class="mb-4 bg-slate-50 p-3 rounded">
+                        <label class="label-xs text-blue-600">Column 3: Contact Details</label>
+                        <input type="text" name="footer_contact_title" value="{{ content.footer_contact_title }}" class="input-std mb-2 font-bold" placeholder="Section Title">
+                        <input type="text" name="contact_addr" value="{{ content.contact_addr }}" class="input-std mb-1" placeholder="Address">
+                        <input type="text" name="contact_phone" value="{{ content.contact_phone }}" class="input-std mb-1" placeholder="Phone">
+                        <input type="text" name="contact_email" value="{{ content.contact_email }}" class="input-std" placeholder="Email">
+                    </div>
+                    <div class="mb-4 bg-slate-50 p-3 rounded">
+                        <label class="label-xs text-blue-600">Column 4: Emergency</label>
+                        <input type="text" name="footer_em_title" value="{{ content.footer_em_title }}" class="input-std mb-2 font-bold" placeholder="Section Title">
+                        <div class="grid grid-cols-2 gap-2 mb-1">
+                            <input type="text" name="footer_em1_name" value="{{ content.footer_em1_name }}" class="input-std" placeholder="Dept Name">
+                            <input type="text" name="footer_em1_num" value="{{ content.footer_em1_num }}" class="input-std" placeholder="Number">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" name="footer_em2_name" value="{{ content.footer_em2_name }}" class="input-std" placeholder="Dept Name">
+                            <input type="text" name="footer_em2_num" value="{{ content.footer_em2_num }}" class="input-std" placeholder="Number">
+                        </div>
+                    </div>
+                    <div class="border-t pt-4">
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            <input type="text" name="social_fb" value="{{ content.social_fb }}" placeholder="Facebook URL" class="input-std">
+                            <input type="text" name="social_x" value="{{ content.social_x }}" placeholder="Twitter/X URL" class="input-std">
+                            <input type="text" name="social_ig" value="{{ content.social_ig }}" placeholder="Instagram URL" class="input-std">
+                        </div>
+                        <label class="label-xs mb-1">Copyright Text</label>
+                        <input type="text" name="footer_copyright" value="{{ content.footer_copyright }}" class="input-std">
+                    </div>
+                </div>
+
+                <div class="sticky bottom-4">
+                    <button type="submit" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded shadow-xl transition transform hover:-translate-y-1">
+                        Save All Content Changes
+                    </button>
+                </div>
+            </form>
+
+            <!-- ========================= 
+                 SECTION 2: GRID ITEMS 
+                 ========================= -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-12">
+                <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 border-b pb-4">
+                    <i class="ri-grid-fill text-yellow-500"></i> Tourist Spots Grid
+                </h3>
+
+                <!-- ADD NEW ITEM -->
+                <form method="POST" enctype="multipart/form-data" class="bg-slate-50 p-5 rounded-lg border border-slate-200 mb-8">
+                    <input type="hidden" name="add_spot" value="true">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                        <input type="text" name="spot_name" placeholder="Name" required class="input-std">
+                        <input type="text" name="spot_link" placeholder="Link URL" class="input-std">
+                    </div>
+                    <div class="bg-white p-3 rounded border border-dashed border-slate-300 mb-3">
+                        <label class="label-xs mb-2">Image Source</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="file" name="spot_image_file" accept="image/*" class="text-xs">
+                            <input type="text" name="spot_image_url" placeholder="OR Paste URL" class="input-std">
+                        </div>
+                    </div>
+                    <input type="text" name="spot_desc" placeholder="Description" class="input-std mb-3">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition">
+                        <i class="ri-add-circle-line"></i> Add Item
+                    </button>
+                </form>
+
+                <!-- LIST ITEMS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for spot in spots %}
+                    <div class="relative group border border-slate-200 rounded-lg overflow-hidden bg-white shadow hover:shadow-md transition">
+                        
+                        <!-- View State -->
+                        <div id="view-{{ spot.id }}">
+                            <div class="h-40 bg-gray-100 relative">
+                                <img src="{{ url_for('static', filename=spot.image_url.replace('static/', '')) if 'static/uploads' in spot.image_url else spot.image_url }}" 
+                                     class="w-full h-full object-cover">
+                                
+                                <!-- Edit Button -->
+                                <button type="button" onclick="toggleEdit('{{ spot.id }}')" class="absolute top-2 right-12 bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-blue-600 z-10">
+                                    <i class="ri-pencil-line"></i>
+                                </button>
+
+                                <!-- Delete Button -->
+                                <form method="POST" class="absolute top-2 right-2 z-10" onsubmit="return confirm('Delete this item?');">
+                                    <input type="hidden" name="delete_spot" value="true">
+                                    <input type="hidden" name="spot_id" value="{{ spot.id }}">
+                                    <button type="submit" class="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-red-600">
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="p-4">
+                                <h4 class="font-bold text-slate-800">{{ spot.name }}</h4>
+                                <p class="text-xs text-slate-500 mt-1 truncate">{{ spot.description }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Edit State (Hidden) -->
+                        <div id="edit-{{ spot.id }}" class="hidden p-4 bg-slate-100 absolute inset-0 z-20 flex flex-col justify-center h-full">
+                            <form method="POST" enctype="multipart/form-data" class="space-y-2 h-full overflow-y-auto">
+                                <input type="hidden" name="edit_spot" value="true">
+                                <input type="hidden" name="spot_id" value="{{ spot.id }}">
+                                
+                                <label class="text-xs font-bold text-slate-500">Edit Details</label>
+                                <input type="text" name="spot_name" value="{{ spot.name }}" class="w-full text-xs p-2 border rounded" placeholder="Name">
+                                <input type="text" name="spot_link" value="{{ spot.link_url }}" class="w-full text-xs p-2 border rounded" placeholder="Link">
+                                <input type="text" name="spot_desc" value="{{ spot.description }}" class="w-full text-xs p-2 border rounded" placeholder="Desc">
+                                
+                                <label class="text-xs font-bold text-slate-500 mt-2 block">Change Image (Optional)</label>
+                                <input type="file" name="spot_image_file" class="text-xs w-full mb-1">
+                                <input type="text" name="spot_image_url" placeholder="Or URL" class="w-full text-xs p-2 border rounded">
+
+                                <div class="flex gap-2 mt-2 pb-2">
+                                    <button type="submit" class="bg-blue-600 text-white text-xs py-2 px-3 rounded flex-1">Save</button>
+                                    <button type="button" onclick="toggleEdit('{{ spot.id }}')" class="bg-gray-400 text-white text-xs py-2 px-3 rounded flex-1">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-slate-400 text-sm col-span-full text-center py-4">No spots added yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            
+        </div>
+    </main>
+</div>
+
+<style>
+    .label-xs { display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 0.25rem; }
+    .input-std { width: 100%; background-color: white; border: 1px solid #cbd5e1; border-radius: 0.25rem; padding: 0.5rem; font-size: 0.875rem; outline: none; }
+    .input-std:focus { border-color: #3b82f6; }
+</style>
+
+<script>
+    function toggleEdit(id) {
+        const viewEl = document.getElementById('view-' + id);
+        const editEl = document.getElementById('edit-' + id);
+        if (editEl.classList.contains('hidden')) {
+            editEl.classList.remove('hidden');
+        } else {
+            editEl.classList.add('hidden');
+        }
+    }
+</script>
+{% endblock %}

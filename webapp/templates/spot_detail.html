@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ spot.name }} | Padre Garcia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- FONTS -->
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.1.0/remixicon.min.css" rel="stylesheet">
+
+<style>
+    /* ===== RESET & CORE STYLES (From your index.html) ===== */
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{ font-family:'Segoe UI',sans-serif; color:#fff; overflow-x:hidden; background-color: #0f172a; }
+
+    /* VIDEO BACKGROUND */
+    .video-bg {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;
+    }
+    .video-bg video{ width:100%; height:100%; object-fit:cover; }
+    .video-bg::after{
+        content:""; position:absolute; inset:0;
+        background:linear-gradient(to bottom right, rgba(0,119,182,.85), rgba(3,4,94,.85));
+    }
+
+    /* NAVBAR */
+    .navbar{
+        position:fixed; top:0; width:100%; display:flex; align-items:center; justify-content:space-between;
+        padding:15px 40px; background:rgba(255,255,255,.15); backdrop-filter:blur(15px); z-index: 1000;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    .navbar a { color: #fff; text-decoration: none; font-weight: 600; font-size: 1.1rem; }
+    .back-btn { display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+    .back-btn:hover { color: #90dbf4; }
+
+    /* HERO SECTION FOR SPOT */
+    .spot-hero {
+        height: 60vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        text-align: center; padding: 20px;
+    }
+    .spot-hero h1 {
+        font-family:'Cinzel', serif; font-size: 4rem; font-weight:700; letter-spacing:4px; text-transform:uppercase;
+        background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(255, 255, 255, 0.8));
+        -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+        text-shadow: 0 0 20px rgba(0,180,216,.4);
+        animation: fadeDown 1s ease forwards;
+    }
+    .spot-hero span {
+        display: block; font-size: 1.2rem; letter-spacing: 2px; color: #90e0ef; margin-top: 10px;
+        animation: fadeUp 1s ease forwards;
+    }
+
+    /* CONTENT CONTAINER */
+    .container {
+        max-width: 1100px; margin: 0 auto 90px; padding: 50px;
+        background: rgba(255,255,255,0.95); /* High opacity for readability */
+        backdrop-filter: blur(20px); border-radius: 32px;
+        box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        color: #333; /* Dark text for readability on white */
+        animation: zoomIn 0.8s ease forwards;
+    }
+
+    /* SPOT IMAGE */
+    .spot-image-wrapper {
+        width: 100%; height: 400px; border-radius: 20px; overflow: hidden; margin-bottom: 40px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 4px solid #fff;
+    }
+    .spot-image-wrapper img {
+        width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s;
+    }
+    .spot-image-wrapper:hover img { transform: scale(1.05); }
+
+    /* TEXT CONTENT */
+    .spot-content { font-family: 'Playfair Display', serif; font-size: 1.1rem; line-height: 1.8; color: #4b3a28; }
+    .spot-content p { margin-bottom: 20px; text-align: justify; }
+    .spot-content h2 { color: #8b5a2b; font-family: 'Cinzel', serif; margin: 30px 0 15px; font-size: 1.8rem; border-bottom: 2px solid #8b5a2b; padding-bottom: 10px; display: inline-block; }
+
+    /* LINK BUTTON */
+    .external-link {
+        display: inline-flex; align-items: center; gap: 10px;
+        margin-top: 30px; padding: 15px 35px;
+        background: #8b5a2b; color: white; text-decoration: none;
+        border-radius: 50px; font-weight: bold; letter-spacing: 1px;
+        transition: 0.3s; box-shadow: 0 10px 20px rgba(139, 90, 43, 0.4);
+    }
+    .external-link:hover { transform: translateY(-3px); background: #6b4423; }
+
+    /* FOOTER */
+    .footer { text-align: center; padding: 40px; color: rgba(255,255,255,0.7); font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.1); }
+
+    /* ANIMATIONS */
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-30px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes zoomIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+
+    /* RESPONSIVE */
+    @media(max-width: 768px) {
+        .spot-hero h1 { font-size: 2.5rem; }
+        .spot-image-wrapper { height: 250px; }
+        .container { padding: 30px; margin: 0 20px 90px; }
+    }
+</style>
+</head>
+<body>
+
+    <!-- VIDEO BACKGROUND -->
+    <div class="video-bg">
+        <video autoplay muted loop>
+            <!-- Assuming video is in static/images -->
+            <source src="{{ url_for('static', filename='images/tourism.mp4') }}" type="video/mp4">
+        </video>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="{{ url_for('views.home') }}" class="back-btn">
+            <i class="ri-arrow-left-line"></i> Back to Home
+        </a>
+        <a href="#">Tourism Padre Garcia</a>
+    </nav>
+
+    <!-- HERO -->
+    <section class="spot-hero">
+        <span>DISCOVER</span>
+        <h1>{{ spot.name }}</h1>
+    </section>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <div class="container">
+        
+        <!-- MAIN IMAGE -->
+        <div class="spot-image-wrapper">
+            <!-- Smart Image Logic -->
+            <img src="{{ url_for('static', filename=spot.image_url.replace('static/', '')) if 'static/uploads' in spot.image_url else spot.image_url }}" 
+                 onerror="this.src='https://readdy.ai/api/search-image?query=Philippines%20Tourism&width=800&height=400'">
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div class="spot-content">
+            <!-- We use 'safe' filter to render HTML if description has <br> or <p> tags -->
+            {{ spot.description | safe }}
+        </div>
+
+        <!-- EXTERNAL LINK (If exists) -->
+        {% if spot.link_url and spot.link_url != '#' %}
+        <div style="text-align: center;">
+            <a href="{{ spot.link_url }}" target="_blank" class="external-link">
+                Visit Official Page <i class="ri-external-link-line"></i>
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>{{ content.footer_copyright }}</p>
+        <p>{{ content.contact_email }} | {{ content.contact_phone }}</p>
+    </footer>
+
+</body>
+</html>

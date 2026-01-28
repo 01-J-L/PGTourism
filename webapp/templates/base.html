@@ -1,0 +1,72 @@
+<!-- templates/base.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Tourism Padre Garcia{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <!-- Link to global styles if you have them -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"> 
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  
+  <!-- Default Nav: Hidden on pages with custom navs via CSS -->
+  <nav class="nav default-nav">
+    <a href="{{ url_for('views.home') }}">Home</a>
+    {% if current_user.is_authenticated %}
+      <!-- If Admin, show Dashboard link -->
+      {% if current_user.is_admin %}
+        <a href="{{ url_for('views.dashboard') }}">Dashboard</a>
+      {% endif %}
+      <a href="{{ url_for('auth.logout') }}">Logout</a>
+    {% else %}
+      <a href="{{ url_for('auth.login') }}">Login</a>
+      <!-- Sign Up link removed to prevent error -->
+    {% endif %}
+  </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <!-- Flash Messages Container -->
+      <div class="fixed top-4 right-4 z-[10000] flex flex-col gap-2 flashes">
+        {% for category, msg in messages %}
+          {% if category == 'error' %}
+            <div class="bg-red-500 text-white px-6 py-4 rounded-lg shadow-xl border border-red-600 flex items-center gap-3 animate-bounce">
+                <i class="ri-error-warning-fill text-2xl"></i>
+                <div>
+                    <h4 class="font-bold text-sm uppercase">Error</h4>
+                    <p class="text-sm">{{ msg }}</p>
+                </div>
+            </div>
+          {% else %}
+            <div class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-xl border border-green-600 flex items-center gap-3 animate-bounce">
+                <i class="ri-checkbox-circle-fill text-2xl"></i>
+                <div>
+                    <h4 class="font-bold text-sm uppercase">Success</h4>
+                    <p class="text-sm">{{ msg }}</p>
+                </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main class="container-fluid">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    // Close flash messages automatically after 3 seconds
+    setTimeout(function() {
+      const flashes = document.querySelector('.flashes');
+      if(flashes) {
+        flashes.style.transition = "opacity 0.5s ease";
+        flashes.style.opacity = "0";
+        setTimeout(() => flashes.remove(), 500);
+      }
+    }, 4000);
+  </script>
+</body>
+</html>
