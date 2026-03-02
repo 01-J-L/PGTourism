@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block title %}{{ content.hist_hero_title }} | Padre Garcia{% endblock %}
+
+{% block head %}
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<style>
+    /* Styling for the sepia images */
+    .sepia-img {
+        filter: sepia(30%) contrast(1.05);
+        transition: all 0.5s ease;
+    }
+
+    .sepia-img:hover {
+        filter: sepia(0%) contrast(1.1);
+        transform: scale(1.02);
+    }
+
+    /* Timeline styling */
+    .timeline-line::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 2px;
+        background-color: #8b5a2b;
+        transform: translateX(-50%);
+        z-index: 0;
+    }
+
+    /* Font imports */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+    .font-cinzel {
+        font-family: 'Cinzel', serif;
+    }
+
+    .font-serif {
+        font-family: 'Playfair Display', serif;
+    }
+
+    /* Drop Cap for Historical Text */
+    .historical-text::first-letter {
+        font-family: 'Cinzel', serif;
+        font-size: 4.5rem;
+        font-weight: 700;
+        color: #78350f; /* Amber 900 */
+        float: left;
+        line-height: 0.8;
+        margin-right: 0.75rem;
+        margin-top: 0.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<header class="h-[60vh] min-h-[400px] relative flex items-center justify-center overflow-hidden bg-slate-900 pt-16 pb-20">
+    <div class="absolute inset-0 z-0 opacity-40">
+        <img src="{{ url_for('static', filename=content.hist_hero_img.replace('static/', '')) if 'static/uploads' in content.hist_hero_img else content.hist_hero_img }}"
+            class="w-full h-full object-cover sepia-img">
+        <div class="absolute inset-0 bg-gradient-to-b from-slate-900/50 to-slate-900"></div>
+    </div>
+    <div class="relative z-10 text-center text-white px-4" data-aos="fade-up">
+        <span class="text-yellow-400 uppercase tracking-[0.3em] text-xs font-bold mb-3 block">{{ content.hist_hero_sub }}</span>
+        <h1 class="text-5xl md:text-7xl lg:text-8xl font-bold mb-4 drop-shadow-lg text-orange-50 font-cinzel">{{ content.hist_hero_title }}</h1>
+    </div>
+</header>
+
+<!-- ORIGINS (ELEVATED POP-OUT CARD) -->
+<section class="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 -mt-24 mb-24">
+    <!-- The Card -->
+    <div class="bg-[#fdf6e3] rounded-xl shadow-2xl border-t-8 border-amber-700 p-8 md:p-12 lg:p-16 relative overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+        
+        <!-- Subtle Paper Texture -->
+        <div class="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none"></div>
+        
+        <div class="relative z-10">
+            <!-- Header inside card -->
+            <div class="text-center mb-10">
+                <h2 class="text-3xl md:text-5xl font-bold text-amber-900 mb-6 font-cinzel tracking-wide">
+                    {{ content.hist_org_title }}
+                </h2>
+                <div class="flex items-center justify-center gap-4 opacity-70">
+                    <span class="h-[1px] w-12 md:w-24 bg-amber-800"></span>
+                    <i class="ri-quill-pen-line text-amber-800 text-2xl"></i>
+                    <span class="h-[1px] w-12 md:w-24 bg-amber-800"></span>
+                </div>
+            </div>
+            
+            <!-- Text Content -->
+            <div class="prose prose-lg md:prose-xl mx-auto text-amber-950 text-justify leading-loose font-serif">
+                <!-- Applied the historical-text class for the Drop Cap -->
+                <p class="whitespace-pre-wrap historical-text">{{ content.hist_org_text }}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MUNICIPAL BUILDINGS -->
+<section class="py-20 bg-white">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="text-center mb-16" data-aos="fade-up">
+            <h2 class="text-3xl md:text-4xl font-bold text-amber-900 font-cinzel mb-4">{{ content.hist_build_title }}</h2>
+            <p class="text-amber-700 italic font-serif text-lg">{{ content.hist_build_sub }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Building 1 -->
+            <div class="group relative overflow-hidden rounded-xl shadow-lg border border-amber-200 cursor-pointer" data-aos="zoom-in"
+                data-aos-delay="100" onclick="openImageModal('{{ url_for('static', filename=content.hist_b1_img.replace('static/', '')) if 'static/uploads' in content.hist_b1_img else content.hist_b1_img }}')">
+                <img src="{{ url_for('static', filename=content.hist_b1_img.replace('static/', '')) if 'static/uploads' in content.hist_b1_img else content.hist_b1_img }}"
+                    class="w-full h-64 object-cover sepia-img group-hover:scale-110 transition duration-700">
+                <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-amber-950 to-transparent pt-12 pb-4 text-center">
+                    <p class="text-white font-serif text-sm drop-shadow-md">{{ content.hist_b1_lbl }} <i class="ri-zoom-in-line ml-1 opacity-70"></i></p>
+                </div>
+            </div>
+            <!-- Building 2 -->
+            <div class="group relative overflow-hidden rounded-xl shadow-lg border border-amber-200 cursor-pointer" data-aos="zoom-in"
+                data-aos-delay="200" onclick="openImageModal('{{ url_for('static', filename=content.hist_b2_img.replace('static/', '')) if 'static/uploads' in content.hist_b2_img else content.hist_b2_img }}')">
+                <img src="{{ url_for('static', filename=content.hist_b2_img.replace('static/', '')) if 'static/uploads' in content.hist_b2_img else content.hist_b2_img }}"
+                    class="w-full h-64 object-cover sepia-img group-hover:scale-110 transition duration-700">
+                <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-amber-950 to-transparent pt-12 pb-4 text-center">
+                    <p class="text-white font-serif text-sm drop-shadow-md">{{ content.hist_b2_lbl }} <i class="ri-zoom-in-line ml-1 opacity-70"></i></p>
+                </div>
+            </div>
+            <!-- Building 3 -->
+            <div class="group relative overflow-hidden rounded-xl shadow-lg border border-amber-200 cursor-pointer" data-aos="zoom-in"
+                data-aos-delay="300" onclick="openImageModal('{{ url_for('static', filename=content.hist_b3_img.replace('static/', '')) if 'static/uploads' in content.hist_b3_img else content.hist_b3_img }}')">
+                <img src="{{ url_for('static', filename=content.hist_b3_img.replace('static/', '')) if 'static/uploads' in content.hist_b3_img else content.hist_b3_img }}"
+                    class="w-full h-64 object-cover sepia-img group-hover:scale-110 transition duration-700">
+                <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-amber-950 to-transparent pt-12 pb-4 text-center">
+                    <p class="text-white font-serif text-sm drop-shadow-md">{{ content.hist_b3_lbl }} <i class="ri-zoom-in-line ml-1 opacity-70"></i></p>
+                </div>
+            </div>
+            <!-- Building 4 -->
+            <div class="group relative overflow-hidden rounded-xl shadow-lg border border-amber-200 cursor-pointer" data-aos="zoom-in"
+                data-aos-delay="400" onclick="openImageModal('{{ url_for('static', filename=content.hist_b4_img.replace('static/', '')) if 'static/uploads' in content.hist_b4_img else content.hist_b4_img }}')">
+                <img src="{{ url_for('static', filename=content.hist_b4_img.replace('static/', '')) if 'static/uploads' in content.hist_b4_img else content.hist_b4_img }}"
+                    class="w-full h-64 object-cover sepia-img group-hover:scale-110 transition duration-700">
+                <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-amber-950 to-transparent pt-12 pb-4 text-center">
+                    <p class="text-white font-serif text-sm drop-shadow-md">{{ content.hist_b4_lbl }} <i class="ri-zoom-in-line ml-1 opacity-70"></i></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PADRE VICENTE GARCIA -->
+<section class="py-24 bg-amber-950 text-orange-50 relative overflow-hidden">
+    <!-- Texture Overlay -->
+    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]">
+    </div>
+
+    <div class="max-w-5xl mx-auto px-6 relative z-10">
+        <div class="flex flex-col items-center text-center mb-12" data-aos="fade-down">
+            <h2 class="text-4xl md:text-6xl font-bold text-yellow-500 mb-4 font-cinzel uppercase tracking-wide drop-shadow-lg">{{
+                content.hist_pg_title }}</h2>
+            <p class="text-xl italic text-orange-200 font-serif">{{ content.hist_pg_sub }}</p>
+        </div>
+
+        <!-- Biography Card -->
+        <div class="bg-[#fdf6e3] text-amber-950 p-8 md:p-14 rounded-2xl shadow-2xl border-4 border-amber-700 mx-auto relative"
+            data-aos="zoom-in">
+            
+            <h3
+                class="text-2xl md:text-3xl font-bold text-center mb-10 text-amber-900 uppercase tracking-widest border-b-2 border-amber-300 pb-4 font-cinzel">
+                {{ content.hist_pg_sect_title }}
+            </h3>
+
+            <div class="flex flex-col md:flex-row gap-10 items-start">
+                <!-- Image -->
+                <div class="w-full md:w-1/3 flex flex-col items-center shrink-0">
+                    <div class="p-2 bg-amber-100 rounded-full shadow-xl mb-4 border border-amber-300">
+                        <img src="{{ url_for('static', filename=content.hist_pg_img.replace('static/', '')) if 'static/uploads' in content.hist_pg_img else content.hist_pg_img }}"
+                            class="w-48 h-auto rounded-full border-4 border-amber-800 sepia-img">
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-amber-800">Padre Vicente T. Garcia</span>
+                </div>
+
+                <!-- Biography Text -->
+                <div class="w-full md:w-2/3">
+                    <div class="text-justify leading-relaxed font-serif text-base md:text-lg text-amber-950">
+                        <div class="whitespace-pre-wrap">{{ content.hist_pg_text }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Links -->
+            <div
+                class="mt-12 pt-8 border-t border-amber-200 flex flex-col sm:flex-row gap-4 justify-center items-center">
+
+                {% if content.hist_pg_file %}
+                <a href="{{ url_for('views.download_watermarked', filename=content.hist_pg_file.replace('static/', '')) }}"
+                    download target="_blank"
+                    class="inline-flex items-center justify-center gap-2 bg-amber-700 text-white px-8 py-3.5 rounded-lg hover:bg-amber-800 transition font-bold text-xs uppercase tracking-widest shadow-lg w-full sm:w-auto">
+                    <i class="ri-download-2-line text-lg"></i> Download Document
+                </a>
+                {% endif %}
+
+                <a href="{{ content.hist_pg_wiki }}" target="_blank"
+                    class="inline-flex items-center justify-center gap-2 bg-transparent border-2 border-amber-700 text-amber-900 px-8 py-3.5 rounded-lg hover:bg-amber-700 hover:text-white transition font-bold text-xs uppercase tracking-widest shadow-md w-full sm:w-auto">
+                    <i class="ri-book-open-line text-lg"></i> Read on Wikipedia
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MAYORS GENERATION -->
+<section class="py-24 bg-white relative overflow-hidden">
+    <div class="max-w-4xl mx-auto px-6">
+        <div class="text-center mb-20 relative z-10">
+            <h2 class="text-4xl md:text-5xl font-bold text-amber-900 mb-4 font-cinzel">{{ content.hist_mayor_title }}</h2>
+            <p class="text-amber-700 font-serif italic text-lg">{{ content.hist_mayor_sub }}</p>
+        </div>
+
+        <div class="relative timeline-line space-y-12">
+            {% if mayors %}
+            {% for mayor in mayors %}
+            <div class="flex justify-center w-full relative z-10" data-aos="fade-up"
+                data-aos-delay="{{ loop.index0 * 50 }}">
+                <div
+                    class="w-full max-w-lg bg-[#fdf6e3] border-2 border-amber-600 rounded-xl p-6 shadow-xl flex items-center gap-6 hover:shadow-2xl transition transform hover:-translate-y-1">
+                    
+                    <!-- Mayor Image with onClick trigger for Modal -->
+                    <div class="w-24 h-32 shrink-0 bg-amber-200 border-2 border-amber-800 rounded overflow-hidden cursor-pointer group relative shadow-inner"
+                         onclick="openImageModal('{{ url_for('static', filename=mayor.image_url.replace('static/', '')) if mayor.image_url and 'static/uploads' in mayor.image_url else mayor.image_url }}')">
+                        <img src="{{ url_for('static', filename=mayor.image_url.replace('static/', '')) if mayor.image_url and 'static/uploads' in mayor.image_url else mayor.image_url }}"
+                            class="w-full h-full object-cover sepia-img group-hover:scale-110 transition duration-500"
+                            onerror="this.src='https://placehold.co/150x200/5a3d1b/FFF?text=No+Img'">
+                        
+                        <!-- Hover icon to indicate clickability -->
+                        <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-300">
+                            <i class="ri-zoom-in-line text-white text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-bold text-amber-900 font-cinzel leading-tight mb-2">{{ mayor.name }}
+                        </h3>
+                        <p class="text-base text-amber-700 font-serif italic mb-3">{{ mayor.role }}</p>
+                        <span
+                            class="inline-block bg-amber-800 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded shadow-sm">{{
+                            mayor.years }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center relative z-10 bg-white p-6 rounded-xl border border-dashed border-slate-300">
+                <p class="text-amber-600 italic">No historical records of mayors added yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- 18 BARANGAYS GRID -->
+<section class="py-24 bg-amber-50 border-t border-amber-100">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-amber-900 mb-4 font-cinzel">{{ content.hist_brgy_title }}</h2>
+            <p class="text-amber-700 italic font-serif text-lg">{{ content.hist_brgy_sub }}</p>
+        </div>
+
+        {% if barangays %}
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {% for brgy in barangays %}
+            <div onclick="openBarangayModal(this)" data-name="{{ brgy.name }}"
+                data-captain="{{ brgy.captain_name or 'N/A' }}"
+                data-img="{{ url_for('static', filename=brgy.captain_image.replace('static/', '')) if brgy.captain_image and 'static/uploads' in brgy.captain_image else brgy.captain_image }}"
+                data-map="{{ brgy.map_url }}"
+                class="bg-white p-5 rounded-xl shadow-sm border-b-4 border-amber-600 text-center hover:bg-amber-600 hover:text-white transition cursor-pointer group transform hover:-translate-y-1">
+                <i class="ri-map-pin-2-fill text-amber-400 text-3xl mb-3 group-hover:text-white block transition"></i>
+                <span class="font-bold text-sm uppercase tracking-wide">{{ brgy.name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-10">
+            <p class="text-slate-500 italic">No barangays added yet. Please add them in the admin panel.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ==========================================
+     MODALS
+=========================================== -->
+
+<!-- 1. BARANGAY DETAILS MODAL -->
+<div id="barangayModal"
+    class="fixed inset-0 z-[9998] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-opacity duration-300">
+    <div
+        class="bg-amber-950 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border-4 border-amber-700 relative text-white">
+
+        <button onclick="closeBarangayModal()"
+            class="absolute top-4 right-4 z-50 text-white/50 hover:text-white transition">
+            <i class="ri-close-circle-fill text-3xl"></i>
+        </button>
+
+        <div class="p-8 text-center relative overflow-hidden">
+            <div
+                class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]">
+            </div>
+
+            <div class="relative z-10">
+                <h2 id="modalName"
+                    class="text-2xl font-bold font-cinzel mb-6 text-yellow-400 tracking-wide border-b border-white/10 pb-4">
+                </h2>
+
+                <div class="w-40 h-40 rounded-full border-4 border-yellow-500 p-1 mb-6 shadow-xl mx-auto bg-amber-800">
+                    <img id="modalImg" src="" class="w-full h-full rounded-full object-cover bg-slate-200"
+                        alt="Captain Photo">
+                </div>
+
+                <div class="mb-8">
+                    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300 mb-1">Punong Barangay</p>
+                    <p id="modalCaptain" class="text-xl font-serif italic text-white"></p>
+                </div>
+
+                <a id="modalMapLink" href="#" target="_blank"
+                    class="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-amber-950 font-bold py-3 px-6 rounded-full transition shadow-lg w-full justify-center">
+                    <i class="ri-map-2-line"></i>
+                    <span>View Map Location</span>
+                </a>
+                <p id="noMapText" class="text-xs text-white/40 mt-2 hidden">No map link available</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. IMAGE LIGHTBOX MODAL -->
+<!-- Clicking the background/backdrop closes the modal -->
+<div id="imageModal" 
+     class="fixed inset-0 z-[9999] hidden flex items-center justify-center bg-black/90 backdrop-blur-md p-4 transition-opacity duration-300 opacity-0" 
+     onclick="closeImageModal()">
+    
+    <!-- Close Button -->
+    <button onclick="closeImageModal()" class="absolute top-4 right-4 md:top-8 md:right-8 z-50 text-white/60 hover:text-white transition transform hover:scale-110">
+        <i class="ri-close-circle-line text-5xl"></i>
+    </button>
+    
+    <div class="relative max-w-5xl max-h-[90vh] w-full h-full flex justify-center items-center">
+        <!-- prevent click propagation so clicking the image itself doesn't close it -->
+        <img id="lightboxImage" src="" 
+             class="max-w-full max-h-full object-contain rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] border-4 border-amber-900/30 filter-none transition-all duration-300" 
+             onclick="event.stopPropagation()">
+    </div>
+</div>
+
+
+<!-- SCRIPTS -->
+<script>
+    /* --- BARANGAY MODAL LOGIC --- */
+    function openBarangayModal(element) {
+        const name = element.getAttribute('data-name');
+        const captain = element.getAttribute('data-captain');
+        const img = element.getAttribute('data-img');
+        const map = element.getAttribute('data-map');
+
+        document.getElementById('modalName').innerText = name;
+        document.getElementById('modalCaptain').innerText = captain;
+
+        const imgElem = document.getElementById('modalImg');
+        if (img && img !== 'None' && img !== '') {
+            imgElem.src = img;
+        } else {
+            imgElem.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(captain) + "&background=random&size=200";
+        }
+
+        const mapLinkElem = document.getElementById('modalMapLink');
+        const noMapText = document.getElementById('noMapText');
+
+        if (map && map.trim() !== "" && map !== 'None') {
+            let href = map;
+            if (map.includes('<iframe')) {
+                const match = map.match(/src="([^"]+)"/);
+                if (match) href = match[1];
+            }
+            mapLinkElem.href = href;
+            mapLinkElem.classList.remove('hidden');
+            noMapText.classList.add('hidden');
+        } else {
+            mapLinkElem.classList.add('hidden');
+            noMapText.classList.remove('hidden');
+        }
+
+        const modal = document.getElementById('barangayModal');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeBarangayModal() {
+        document.getElementById('barangayModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    /* --- IMAGE LIGHTBOX LOGIC --- */
+    function openImageModal(src) {
+        const modal = document.getElementById('imageModal');
+        const img = document.getElementById('lightboxImage');
+        
+        img.src = src;
+        modal.classList.remove('hidden');
+        
+        // Timeout to allow display:block to render before fading in opacity
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+        }, 10);
+        
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeImageModal() {
+        const modal = document.getElementById('imageModal');
+        modal.classList.add('opacity-0');
+        
+        // Wait for transition to finish before hiding completely
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            document.getElementById('lightboxImage').src = ""; // clear src to prevent ghosting on next open
+        }, 300);
+    }
+
+    /* --- GLOBAL MODAL CLOSE HANDLER --- */
+    window.onclick = function (event) {
+        if (event.target == document.getElementById('barangayModal')) {
+            closeBarangayModal();
+        }
+    }
+    
+    // Allow closing Lightbox with Escape key
+    document.addEventListener('keydown', function(event){
+        if(event.key === "Escape"){
+            closeImageModal();
+            closeBarangayModal();
+        }
+    });
+</script>
+
+{% endblock %}

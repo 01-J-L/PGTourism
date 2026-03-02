@@ -6,30 +6,74 @@ from . import db
 
 auth = Blueprint("auth", __name__)
 
+# ==========================================
+#           SUB-ADMIN LOGIN (/login)
+# ==========================================
 @auth.route("/login", methods=["GET", "POST"])
 def login():
-    # If already logged in, redirect based on role
+    # If already logged in
     if current_user.is_authenticated:
-        if current_user.is_admin:
-            return redirect(url_for("views.dashboard"))
-        return redirect(url_for("views.home"))
+        if current_user.is_super_admin:
+            return redirect(url_for("views.dashboard")) # Or redirect to super admin login if strict
+        return redirect(url_for("views.dashboard"))
 
     if request.method == "POST":
-        email = request.form.get("email", "").strip() # Removed .lower() to allow 'admin'
+        email = request.form.get("email", "").strip()
         pw    = request.form.get("password", "")
 
         user = User.query.filter_by(email=email).first()
         
-        # Check password
+        # Check credentials
         if user and check_password_hash(user.password, pw):
-            login_user(user, remember=True)
+            
+            # 1. Check if user is a Super Admin trying to login here
+            if user.is_super_admin:
+                flash("Super Admins must use the Secure Admin Portal.", "error")
+                return redirect(url_for("auth.super_admin_login"))
+            
+            # 2. Check if user is a Sub-Admin
             if user.is_admin:
+                login_user(user, remember=True)
                 return redirect(url_for("views.dashboard"))
-            return redirect(url_for("views.home"))
+            else:
+                # Normal user (if any exist)
+                login_user(user, remember=True)
+                return redirect(url_for("views.home"))
         else:
-            flash("Invalid username or password.", "error")
+            flash("Invalid credentials.", "error")
 
     return render_template("login.html")
+
+# ==========================================
+#       SUPER ADMIN LOGIN (/admin@login)
+# ==========================================
+@auth.route("/admin@login", methods=["GET", "POST"])
+def super_admin_login():
+    # If already logged in
+    if current_user.is_authenticated:
+        return redirect(url_for("views.dashboard"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        pw    = request.form.get("password", "")
+
+        user = User.query.filter_by(email=email).first()
+
+        # Check credentials
+        if user and check_password_hash(user.password, pw):
+            
+            # STRICT CHECK: Must be Super Admin
+            if user.is_super_admin:
+                login_user(user, remember=True)
+                flash("Welcome back, Super Administrator.", "success")
+                return redirect(url_for("views.dashboard"))
+            else:
+                flash("Unauthorized. This portal is for Super Admins only.", "error")
+                return redirect(url_for("auth.login"))
+        else:
+            flash("Invalid Super Admin credentials.", "error")
+
+    return render_template("admin_login.html")
 
 @auth.route("/logout")
 @login_required

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Attractions Page | Admin Panel{% endblock %}
+
+{% block head %}
+<style>
+    .default-nav { display: none !important; }
+    textarea { resize: vertical; }
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: #f1f5f9; }
+    textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    textarea::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .img-preview-box { position: relative; overflow: hidden; border-radius: 0.5rem; border: 1px solid #e2e8f0; background-color: #f8fafc; aspect-ratio: 16/9; }
+    /* Added video styling */
+    .img-preview-box img, .img-preview-box video { width: 100%; height: 100%; object-fit: cover; }
+    .file-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: white; cursor: pointer; }
+    .img-preview-box:hover .file-overlay { opacity: 1; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block navbar %}
+<nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-8 shadow-sm">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('views.dashboard') }}" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition" title="Back to Dashboard">
+            <i class="ri-arrow-left-line text-xl"></i>
+        </a>
+        <div class="h-8 w-[1px] bg-slate-200 mx-2 hidden md:block"></div>
+        <div>
+            <h1 class="text-lg font-bold text-slate-800 leading-tight">Edit Attractions Page</h1>
+            <p class="text-xs text-slate-400 hidden md:block">Managing Major Tourist Spots</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{{ url_for('views.attractions') }}" target="_blank" class="hidden md:flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition px-3 py-2">
+            <i class="ri-eye-line"></i> Preview
+        </a>
+        <button type="submit" form="staticForm" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg hover:shadow-blue-500/30 transition flex items-center gap-2">
+            <i class="ri-save-3-fill"></i> Save Static Header
+        </button>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<form id="staticForm" method="POST" enctype="multipart/form-data" class="hidden"></form>
+
+<div class="min-h-screen bg-slate-50 pt-24 pb-20 px-4 md:px-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- LEFT COLUMN: Main Dynamic List -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-map-pin-range-line text-orange-500"></i>
+                        <h2 class="font-bold text-slate-700">Dynamic Attractions List</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+
+                        <!-- Existing Items List -->
+                        <div class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scroll">
+                            {% if attractions %}
+                                {% for attr in attractions %}
+                                <div class="flex flex-col sm:flex-row items-start gap-4 border border-slate-200 rounded-lg p-4 hover:shadow-sm transition bg-slate-50">
+                                    <div class="w-full sm:w-24 h-32 sm:h-24 shrink-0 bg-slate-200 rounded overflow-hidden">
+                                        {% if attr.media_url %}
+                                            {% if attr.media_url.endswith('.mp4') or attr.media_url.endswith('.webm') %}
+                                                <video src="{{ url_for('static', filename=attr.media_url.replace('static/', '')) if 'static/uploads' in attr.media_url else attr.media_url }}" autoplay muted loop playsinline class="w-full h-full object-cover"></video>
+                                            {% else %}
+                                                <img src="{{ url_for('static', filename=attr.media_url.replace('static/', '')) if 'static/uploads' in attr.media_url else attr.media_url }}" class="w-full h-full object-cover">
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow min-w-0 w-full">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase">{{ attr.tag or 'No Tag' }}</span>
+                                        </div>
+                                        <h4 class="font-bold text-base text-slate-800 truncate">{{ attr.name }}</h4>
+                                        <p class="text-xs text-slate-500 line-clamp-2 mt-1 mb-2">{{ attr.description }}</p>
+                                        <p class="text-[10px] text-slate-400 font-mono truncate"><i class="ri-map-pin-line"></i> {{ attr.location }}</p>
+                                    </div>
+                                    <div class="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
+                                        <!-- UPDATED: Pass attr.media_url to modal for preview/type checking -->
+                                        <button type="button" onclick="openAttrModal('{{ attr.id }}', '{{ attr.name|replace("'", "\\'") }}', '{{ attr.tag|replace("'", "\\'") }}', '{{ attr.location|replace("'", "\\'") }}', `{{ attr.description|replace("`", "\\`") }}`, '{{ attr.map_url }}', '{{ attr.media_url }}')" class="w-8 h-8 rounded bg-blue-100 text-blue-600 hover:bg-blue-500 hover:text-white flex items-center justify-center transition"><i class="ri-pencil-line"></i></button>
+                                        <form method="POST" onsubmit="return confirm('Delete this attraction?');">
+                                            <input type="hidden" name="delete_attr" value="true">
+                                            <input type="hidden" name="attr_id" value="{{ attr.id }}">
+                                            <button type="submit" class="w-8 h-8 rounded bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition"><i class="ri-delete-bin-line"></i></button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-6 text-slate-400 italic text-sm border border-dashed border-slate-300 rounded-lg">No attractions added yet.</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Add New Form -->
+                        <div class="bg-orange-50/50 rounded-lg p-5 border border-orange-100 mt-6">
+                            <h4 class="text-xs font-bold text-orange-600 uppercase mb-4">Add New Attraction</h4>
+                            <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                                <input type="hidden" name="add_attr" value="true">
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <input type="text" name="attr_name" placeholder="Attraction Name" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                                    <input type="text" name="attr_tag" placeholder="Tag (e.g. Nature, Established 1952)" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <input type="text" name="attr_loc" placeholder="Location (e.g. Poblacion)" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                                    <input type="url" name="attr_map" placeholder="Map Link (https://...)" class="w-full border border-slate-300 rounded px-3 py-2 text-sm font-mono text-xs focus:outline-none focus:border-orange-500">
+                                </div>
+
+                                <textarea name="attr_desc" placeholder="Detailed Description..." rows="3" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-500 resize-none"></textarea>
+                                
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Featured Media (Image or Video)</label>
+                                    <div class="flex items-center gap-2 bg-white border border-slate-300 rounded px-3 py-2">
+                                        <i class="ri-image-add-line text-slate-400"></i>
+                                        <!-- Changed name to attr_media, accept to include video types -->
+                                        <input type="file" name="attr_media" required class="text-xs text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:bg-orange-100 file:text-orange-700 cursor-pointer" accept="image/*,video/mp4,video/webm">
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-bold text-sm transition shadow-sm"><i class="ri-add-circle-line"></i> Publish Attraction</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Static Hero Editor -->
+            <div class="lg:col-span-1 space-y-8">
+                
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-layout-top-line text-blue-500"></i>
+                        <h2 class="font-bold text-slate-700">Hero Header Settings</h2>
+                    </div>
+                    <div class="p-6 space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Main Title</label>
+                            <input type="text" form="staticForm" name="attr_hero_title" value="{{ content.attr_hero_title }}" class="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Small Subtitle</label>
+                            <input type="text" form="staticForm" name="attr_hero_sub" value="{{ content.attr_hero_sub }}" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Description</label>
+                            <textarea form="staticForm" name="attr_hero_desc" rows="3" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none">{{ content.attr_hero_desc }}</textarea>
+                        </div>
+
+                        <div class="border-t border-slate-100 pt-5">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Hero Background Image</label>
+                            <div class="img-preview-box">
+                                {% if content.attr_hero_bg %}
+                                <img src="{{ url_for('static', filename=content.attr_hero_bg.replace('static/', '')) if 'static/uploads' in content.attr_hero_bg else content.attr_hero_bg }}">
+                                {% endif %}
+                                <label class="file-overlay">
+                                    <i class="ri-upload-cloud-2-line text-2xl mb-1"></i>
+                                    <span class="text-[10px] uppercase font-bold">Upload New</span>
+                                    <input type="file" form="staticForm" name="attr_hero_bg_file" class="hidden" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- =========================
+     MODAL: EDIT ATTRACTION
+========================== -->
+<div id="attrModal" class="fixed inset-0 z-[99] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
+        <div class="flex justify-between items-center mb-4 border-b border-orange-100 pb-3">
+            <h3 class="font-bold text-orange-600 flex items-center gap-2"><i class="ri-edit-box-line"></i> Edit Attraction</h3>
+            <button onclick="closeModal('attrModal')" class="text-slate-400 hover:text-red-500"><i class="ri-close-line text-xl"></i></button>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="edit_attr" value="true">
+            <input type="hidden" id="editAttrId" name="attr_id" value="">
+            
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Name</label>
+                        <input type="text" id="editAttrName" name="attr_name" required class="w-full border rounded px-3 py-2 text-sm focus:border-orange-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Tag</label>
+                        <input type="text" id="editAttrTag" name="attr_tag" class="w-full border rounded px-3 py-2 text-sm focus:border-orange-500 outline-none">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Location</label>
+                        <input type="text" id="editAttrLoc" name="attr_loc" class="w-full border rounded px-3 py-2 text-sm focus:border-orange-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Map URL</label>
+                        <input type="url" id="editAttrMap" name="attr_map" class="w-full border rounded px-3 py-2 text-sm font-mono focus:border-orange-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Description</label>
+                    <textarea id="editAttrDesc" name="attr_desc" rows="4" class="w-full border rounded px-3 py-2 text-sm focus:border-orange-500 outline-none resize-none"></textarea>
+                </div>
+                
+                <div class="bg-orange-50 p-3 rounded border border-orange-100">
+                    <label class="block text-xs font-bold text-orange-700 mb-1">Replace Media (Image/Video - Optional)</label>
+                    <!-- Changed name to attr_media, accept to include video types -->
+                    <input type="file" name="attr_media" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-white file:text-orange-700 cursor-pointer" accept="image/*,video/mp4,video/webm">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" onclick="closeModal('attrModal')" class="px-4 py-2 border rounded-lg text-sm hover:bg-slate-50 font-bold text-slate-600">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600 font-bold shadow-md">Update Attraction</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // UPDATED: Added media_url to the parameters
+    function openAttrModal(id, name, tag, loc, desc, map, media_url) {
+        document.getElementById('editAttrId').value = id;
+        document.getElementById('editAttrName').value = name;
+        document.getElementById('editAttrTag').value = tag === 'None' ? '' : tag;
+        document.getElementById('editAttrLoc').value = loc === 'None' ? '' : loc;
+        document.getElementById('editAttrDesc').value = desc === 'None' ? '' : desc;
+        document.getElementById('editAttrMap').value = map === 'None' ? '' : map;
+        // You could add a preview for media_url if desired, e.g., in a dedicated span
+        // For now, just pass it for consistency. The new file input will replace it.
+        document.getElementById('attrModal').classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+    
+    window.onclick = function(event) {
+        if (event.target.id === 'attrModal') closeModal('attrModal');
+    }
+</script>
+{% endblock %}
+
+{% block footer %}{% endblock %}

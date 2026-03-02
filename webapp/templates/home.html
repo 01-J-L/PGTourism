@@ -1,350 +1,224 @@
+
 {% extends "base.html" %}
 
-{% block title %}Tourism Padre Garcia | Cattle Trading Capital{% endblock %}
-
-{% block body_class %}bg-slate-50{% endblock %}
+{% block title %}Home | Padre Garcia{% endblock %}
 
 {% block head %}
-<!-- TAILWIND CSS -->
-<script src="https://cdn.tailwindcss.com/3.4.16"></script>
-<script>
-    tailwind.config = {
-        theme: {
-            extend: {
-                colors: {
-                    primary: '#1e3a8a',    /* Royal Blue */
-                    secondary: '#ca8a04',  /* Gold/Bronze */
-                    dark: '#0f172a',
-                    light: '#f8fafc'
-                },
-                fontFamily: {
-                    sans: ['Inter', 'sans-serif'],
-                    serif: ['Playfair Display', 'serif'],
-                }
-            }
-        }
-    }
-</script>
-
-<!-- FONTS & ICONS -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.1.0/remixicon.min.css" rel="stylesheet">
-
-<!-- AOS ANIMATION LIBRARY -->
-<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-
 <style>
-    /* HIDE DEFAULT BASE NAV */
-    .default-nav { display: none !important; }
-    
-    /* CUSTOM UTILITIES */
-    body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
-    h1, h2, h3, .brand-font { font-family: 'Playfair Display', serif; }
-
-    /* DYNAMIC HERO BACKGROUND */
+    /* 
+       Responsive Hero Background 
+       On touch devices, 'fixed' attachment can be jittery. 
+       We use a media query to enable the parallax effect only on larger screens/mouse devices.
+    */
     .hero-section {
-        background: linear-gradient(to bottom, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.8)),
-                    url("{{ url_for('static', filename=content.hero_image.replace('static/', '')) if content.hero_image and 'static/uploads' in content.hero_image else content.hero_image }}");
+        background: linear-gradient(to bottom, rgba(30, 58, 138, 0.7), rgba(15, 23, 42, 0.9)),
+        url("{{ url_for('static', filename=content.hero_image.replace('static/', '')) if content.hero_image and 'static/uploads' in content.hero_image else content.hero_image }}");
         background-size: cover;
         background-position: center;
-        background-attachment: fixed; 
+        background-repeat: no-repeat;
     }
 
-    /* GLASSMORPHISM */
-    .glass-nav {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    @media (min-width: 1024px) {
+        .hero-section {
+            background-attachment: fixed;
+        }
     }
-    
-    /* PAGINATION STYLES */
-    .pagination-btn {
-        width: 40px; height: 40px;
-        display: flex; align-items: center; justify-content: center;
-        border-radius: 50%; font-weight: 600; transition: all 0.3s ease; cursor: pointer;
-    }
-    .pagination-btn.active { background-color: #1e3a8a; color: white; }
-    .pagination-btn.inactive { background-color: white; color: #1e3a8a; border: 1px solid #e2e8f0; }
-    .pagination-btn.inactive:hover { background-color: #eff6ff; border-color: #1e3a8a; }
-    
-    .fade-in { animation: fadeIn 0.5s ease-in-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 {% endblock %}
 
 {% block content %}
-
-<!-- NAVIGATION -->
-<nav class="fixed top-0 w-full z-50 glass-nav transition-all duration-300" id="navbar">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        <a href="#" class="flex items-center gap-3 group">
-            <div class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition">
-                <i class="ri-government-line text-yellow-400 text-xl"></i>
-            </div>
-            <div class="flex flex-col">
-                <span class="text-white font-bold tracking-widest text-sm uppercase">Tourism</span>
-                <span class="text-yellow-400 font-serif text-lg leading-none tracking-wide">Padre Garcia</span>
-            </div>
-        </a>
-
-        <div class="hidden md:flex items-center gap-8">
-            <a href="#" onclick="scrollToID('home')" class="text-white/80 hover:text-white text-sm font-medium tracking-wide transition">Home</a>
-            <a href="#" onclick="scrollToID('spots')" class="text-white/80 hover:text-white text-sm font-medium tracking-wide transition">Discover</a>
-            <a href="#" onclick="scrollToID('about')" class="text-white/80 hover:text-white text-sm font-medium tracking-wide transition">About</a>
-            <a href="{{ url_for('views.contacts') }}" class="text-white/80 hover:text-white text-sm font-medium tracking-wide transition">Contact</a>
-        </div>
-
-        <div class="flex items-center gap-3">
-            {% if current_user.is_authenticated %}
-                {% if current_user.is_admin %}
-                    <a href="{{ url_for('views.dashboard') }}" class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 border border-yellow-500 px-5 py-2 rounded-full text-sm font-bold transition flex items-center gap-2">
-                        <i class="ri-edit-box-line"></i> Edit Site
-                    </a>
-                {% endif %}
-                <a href="{{ url_for('auth.logout') }}" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-5 py-2 rounded-full text-sm font-medium transition backdrop-blur-sm">
-                    Logout
-                </a>
-            {% else %}
-                <a href="{{ url_for('auth.login') }}" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-2 rounded-full text-sm font-medium transition backdrop-blur-sm hover:shadow-lg">
-                    Admin Login
-                </a>
-            {% endif %}
-        </div>
-    </div>
-</nav>
-
 <!-- HERO -->
-<header id="home" class="hero-section min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-    <div class="absolute top-1/4 left-10 w-24 h-24 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-    <div class="absolute bottom-1/4 right-10 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl"></div>
-
-    <div class="text-center relative z-10 px-6 max-w-5xl mx-auto" data-aos="zoom-in" data-aos-duration="1000">
-        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-6" data-aos="fade-down" data-aos-delay="200">
+<header class="hero-section min-h-[85vh] md:min-h-screen flex items-center justify-center relative pt-20 pb-10">
+    <div class="text-center relative z-10 px-4 sm:px-6 max-w-5xl mx-auto w-full" data-aos="zoom-in">
+        
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-6 shadow-lg">
             <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-            <span class="text-blue-100 text-xs font-semibold tracking-widest uppercase">Municipal Tourism</span>
+            <span class="text-blue-100 text-[10px] md:text-xs font-semibold tracking-widest uppercase">Municipal Tourism</span>
         </div>
-        <h1 class="text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-tight mb-6 drop-shadow-lg">
-            {{ content.hero_title_1 }} <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">{{ content.hero_title_2 }}</span>
+
+        <!-- Main Title -->
+        <h1 class="text-4xl sm:text-5xl md:text-7xl font-bold text-white leading-tight mb-4 md:mb-6 drop-shadow-lg">
+            {{ content.hero_title_1 }} <br class="sm:hidden" />
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">{{ content.hero_title_2 }}</span>
         </h1>
-        <p class="text-lg md:text-2xl text-blue-100/90 font-light tracking-wide max-w-2xl mx-auto mb-10" data-aos="fade-up" data-aos-delay="400">{{ content.hero_subtitle }}</p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center" data-aos="fade-up" data-aos-delay="600">
-            <button onclick="scrollToID('spots')" class="group bg-white text-primary px-8 py-3.5 rounded-full font-semibold shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 flex items-center gap-2">
-                Explore Destinations <i class="ri-arrow-right-line group-hover:translate-x-1 transition-transform"></i>
-            </button>
-        </div>
-    </div>
-    <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce">
-        <i class="ri-arrow-down-line text-white/50 text-2xl"></i>
+
+        <!-- Subtitle -->
+        <p class="text-base sm:text-lg md:text-2xl text-blue-100/90 font-light tracking-wide max-w-xl md:max-w-2xl mx-auto mb-8 md:mb-10 leading-relaxed">
+            {{ content.hero_subtitle }}
+        </p>
+
+        <!-- CTA Button -->
+        <a href="#spots" class="bg-white text-primary px-6 py-3 md:px-8 md:py-3.5 rounded-full font-bold text-sm md:text-base shadow-xl hover:shadow-2xl transition hover:-translate-y-1 inline-flex items-center gap-2 group">
+            Explore Destinations 
+            <i class="ri-arrow-right-line group-hover:translate-x-1 transition-transform"></i>
+        </a>
     </div>
 </header>
 
 <!-- TOURIST SPOTS -->
-<section id="spots" class="py-24 bg-white relative">
-    <div class="max-w-7xl mx-auto px-6">
-        <div class="text-center mb-16" data-aos="fade-up">
-            <h2 class="text-4xl font-bold text-slate-900 mb-4 font-sans tracking-tight">Discover Padre Garcia</h2>
-            <p class="text-slate-500 max-w-2xl mx-auto text-lg">Explore the best tourist spots and attractions</p>
+<section id="spots" class="py-16 md:py-24 bg-white scroll-mt-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Section Header -->
+        <div class="text-center mb-12 md:mb-16" data-aos="fade-up">
+            <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Discover Padre Garcia</h2>
+            <div class="h-1 w-20 bg-secondary mx-auto rounded-full mb-3"></div>
+            <p class="text-slate-500 text-sm md:text-base">Explore our pride, heritage, and natural wonders</p>
         </div>
 
-        <div id="tourist-grid" class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-10 min-h-[400px]">
-            {% for spot in spots %}
-            <!-- LINKS TO NEW DETAIL PAGE -->
-            <a href="{{ url_for('views.spot_detail', id=spot.id) }}" class="tourist-card group block">
-                <div class="aspect-square bg-gray-200 rounded-2xl overflow-hidden mb-4 relative shadow-md group-hover:shadow-2xl transition-all duration-300">
-                    <img src="{{ url_for('static', filename=spot.image_url.replace('static/', '')) if 'static/uploads' in spot.image_url else spot.image_url }}" 
-                         onerror="this.src='https://readdy.ai/api/search-image?query=Philippines%20Nature&width=500&height=500'" 
-                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+        <!-- SPOTS GRID -->
+        <!-- 
+           grid-cols-1: Mobile (1 card per row)
+           sm:grid-cols-2: Small Tablets (2 cards per row)
+           lg:grid-cols-4: Desktop (4 cards per row)
+        -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            {% for spot in spots.items %}
+            <a href="{{ url_for('views.spot_detail', id=spot.id) }}" class="group block h-full flex flex-col" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 50 }}">
+                <div class="aspect-[4/3] bg-gray-200 rounded-2xl overflow-hidden mb-4 relative shadow-md">
+                    <img src="{{ url_for('static', filename=spot.image_url.replace('static/', '')) if 'static/uploads' in spot.image_url else spot.image_url }}"
+                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        alt="{{ spot.name }}">
+                    
+                    <!-- Hover Overlay -->
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center">
-                        <span class="border border-white text-white px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm">
-                            Read More <i class="ri-arrow-right-line"></i>
-                        </span>
+                        <span class="text-white border border-white/80 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium">View Details</span>
                     </div>
                 </div>
-                <h3 class="font-bold text-slate-800 text-center text-lg group-hover:text-primary transition-colors">{{ spot.name }}</h3>
+                <h3 class="font-bold text-slate-800 text-lg group-hover:text-primary transition leading-tight">{{ spot.name }}</h3>
+                <p class="text-slate-500 text-sm mt-1 line-clamp-2">{{ spot.description | striptags }}</p>
             </a>
-            {% endfor %}
-            {% if not spots %}
-            <div class="col-span-full text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                <i class="ri-image-add-line text-4xl text-slate-300 mb-2"></i>
+            {% else %}
+            <div class="col-span-1 sm:col-span-2 lg:col-span-4 text-center py-10">
+                <div class="inline-block p-4 rounded-full bg-slate-100 text-slate-400 mb-3">
+                    <i class="ri-image-line text-3xl"></i>
+                </div>
                 <p class="text-slate-500">No tourist spots added yet.</p>
-                {% if current_user.is_admin %}<a href="{{ url_for('views.dashboard') }}" class="text-blue-500 underline text-sm">Add one now</a>{% endif %}
             </div>
-            {% endif %}
+            {% endfor %}
         </div>
-        <div id="pagination-controls" class="mt-12 flex justify-center gap-2" data-aos="fade-up"></div>
+
+        <!-- PAGINATION CONTROLS -->
+        {% if spots.pages > 1 %}
+        <div class="mt-12 md:mt-16 flex flex-wrap justify-center items-center gap-2" data-aos="fade-up">
+            
+            <!-- Previous Button -->
+            {% if spots.has_prev %}
+            <a href="{{ url_for('views.home', page=spots.prev_num, _anchor='spots') }}" 
+               class="px-3 py-2 md:px-4 md:py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-primary transition shadow-sm font-medium text-xs md:text-sm flex items-center gap-1">
+               <i class="ri-arrow-left-line"></i> Prev
+            </a>
+            {% else %}
+            <span class="px-3 py-2 md:px-4 md:py-2 bg-slate-50 border border-slate-100 text-slate-300 rounded-lg cursor-not-allowed font-medium text-xs md:text-sm flex items-center gap-1 opacity-60">
+               <i class="ri-arrow-left-line"></i> Prev
+            </span>
+            {% endif %}
+
+            <!-- Page Numbers -->
+            {% for page_num in spots.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                {% if page_num %}
+                    {% if spots.page == page_num %}
+                        <span class="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-primary text-white rounded-lg font-bold shadow-md shadow-blue-500/30 text-xs md:text-sm">
+                            {{ page_num }}
+                        </span>
+                    {% else %}
+                        <a href="{{ url_for('views.home', page=page_num, _anchor='spots') }}" 
+                           class="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-primary transition text-xs md:text-sm font-medium">
+                            {{ page_num }}
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <span class="text-slate-400 px-1 text-sm">...</span>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Next Button -->
+            {% if spots.has_next %}
+            <a href="{{ url_for('views.home', page=spots.next_num, _anchor='spots') }}" 
+               class="px-3 py-2 md:px-4 md:py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-primary transition shadow-sm font-medium text-xs md:text-sm flex items-center gap-1">
+               Next <i class="ri-arrow-right-line"></i>
+            </a>
+            {% else %}
+            <span class="px-3 py-2 md:px-4 md:py-2 bg-slate-50 border border-slate-100 text-slate-300 rounded-lg cursor-not-allowed font-medium text-xs md:text-sm flex items-center gap-1 opacity-60">
+               Next <i class="ri-arrow-right-line"></i>
+            </span>
+            {% endif %}
+
+        </div>
+        {% endif %}
+
     </div>
 </section>
 
-<!-- ABOUT -->
-<section id="about" class="py-24 bg-slate-50 overflow-hidden">
-    <div class="max-w-7xl mx-auto px-6">
-        <div class="flex flex-col lg:flex-row items-center gap-16">
-            <div class="w-full lg:w-1/2 relative" data-aos="fade-right">
-                <div class="absolute -top-4 -left-4 w-24 h-24 bg-yellow-100 rounded-full z-0"></div>
-                <div class="absolute -bottom-4 -right-4 w-32 h-32 bg-blue-50 rounded-full z-0"></div>
-                <img src="{{ url_for('static', filename=content.about_image.replace('static/', '')) if 'static/uploads' in content.about_image else content.about_image }}" 
-                     class="relative z-10 w-full rounded-2xl shadow-2xl border-4 border-white object-cover transform rotate-1 hover:rotate-0 transition duration-500">
-            </div>
-            <div class="w-full lg:w-1/2" data-aos="fade-left">
-                <span class="text-secondary font-bold tracking-widest uppercase text-sm mb-2 block">About Our Town</span>
-                <h2 class="text-4xl lg:text-5xl font-bold text-dark mb-6 leading-tight">{{ content.about_title }}</h2>
-                <p class="text-slate-600 text-lg mb-6 leading-relaxed whitespace-pre-wrap">{{ content.about_text }}</p>
-                <div class="grid grid-cols-2 gap-6 mb-8">
-                    <div class="flex items-start gap-3">
-                        <i class="ri-shield-check-line text-secondary text-2xl mt-1"></i>
-                        <div><h4 class="font-bold text-dark">Safe & Peaceful</h4><p class="text-sm text-slate-500">A welcoming community.</p></div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <i class="ri-store-3-line text-secondary text-2xl mt-1"></i>
-                        <div><h4 class="font-bold text-dark">Thriving Economy</h4><p class="text-sm text-slate-500">Center of agri-trade.</p></div>
-                    </div>
-                </div>
-                <a href="#contacts" class="bg-dark text-white px-8 py-3 rounded-lg font-medium hover:bg-primary transition shadow-lg shadow-blue-900/20 inline-block">Plan Your Visit</a>
-            </div>
+<!-- ABOUT TEASER -->
+<section class="py-16 md:py-24 bg-slate-50 overflow-hidden">
+    <!-- 
+       Flex-col-reverse for mobile (Text on top? No, usually Image top or bottom. 
+       Here we use Grid stacking. Image first, then text is default in HTML order.
+       We can swap order with 'order-last' if needed on mobile.
+    -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+        
+        <!-- Image Container -->
+        <div class="relative mx-auto w-full max-w-md lg:max-w-full" data-aos="fade-right">
+            <!-- Decorative BG element -->
+            <div class="absolute inset-0 bg-secondary/10 transform translate-x-3 translate-y-3 rounded-2xl"></div>
+            <img src="{{ url_for('static', filename=content.about_image.replace('static/', '')) if 'static/uploads' in content.about_image else content.about_image }}"
+                class="relative z-10 w-full h-auto rounded-2xl shadow-xl rotate-1 hover:rotate-0 transition duration-500 object-cover aspect-[4/3] lg:aspect-auto"
+                alt="About Padre Garcia">
+        </div>
+
+        <!-- Text Content -->
+        <div class="text-center lg:text-left" data-aos="fade-left">
+            <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4 md:mb-6">{{ content.about_title }}</h2>
+            <p class="text-slate-600 text-base md:text-lg mb-6 md:mb-8 leading-relaxed line-clamp-6 md:line-clamp-none text-justify lg:text-left">
+                {{ content.about_text }}
+            </p>
+            <a href="{{ url_for('views.about') }}" class="inline-flex items-center text-primary font-bold hover:underline gap-1 group">
+                Read Full Story 
+                <i class="ri-arrow-right-line group-hover:translate-x-1 transition-transform"></i>
+            </a>
         </div>
     </div>
 </section>
 
 <!-- TRAVEL ESSENTIALS -->
-<section class="py-24 bg-primary relative">
-    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-    <div class="max-w-7xl mx-auto px-6 relative z-10">
-        <div class="text-center mb-16" data-aos="fade-up">
-            <h2 class="text-4xl font-bold text-white mb-4">Travel Essentials</h2>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl hover:bg-white/15 transition" data-aos="fade-up" data-aos-delay="100">
-                <div class="w-14 h-14 bg-yellow-500 rounded-xl flex items-center justify-center text-white text-2xl mb-6"><i class="ri-calendar-event-line"></i></div>
-                <h3 class="text-xl font-bold text-white mb-3">{{ content.travel_title_1 }}</h3>
-                <p class="text-blue-100/80 leading-relaxed">{{ content.travel_text_1 }}</p>
+<section class="py-16 md:py-20 bg-primary text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-2xl md:text-3xl font-bold mb-10 md:mb-12 relative inline-block">
+            Travel Essentials
+            <span class="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-yellow-400 rounded-full"></span>
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+            <!-- Card 1 -->
+            <div class="bg-white/10 p-6 md:p-8 rounded-2xl backdrop-blur-sm border border-white/10 hover:bg-white/20 transition duration-300" data-aos="fade-up" data-aos-delay="100">
+                <div class="w-14 h-14 mx-auto bg-yellow-500/20 rounded-full flex items-center justify-center mb-4 text-yellow-400">
+                    <i class="ri-calendar-event-line text-3xl"></i>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold mb-2">{{ content.travel_title_1 }}</h3>
+                <p class="text-sm text-blue-100 opacity-90 leading-relaxed">{{ content.travel_text_1 }}</p>
             </div>
-            <div class="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl hover:bg-white/15 transition" data-aos="fade-up" data-aos-delay="200">
-                <div class="w-14 h-14 bg-blue-500 rounded-xl flex items-center justify-center text-white text-2xl mb-6"><i class="ri-roadmap-line"></i></div>
-                <h3 class="text-xl font-bold text-white mb-3">{{ content.travel_title_2 }}</h3>
-                <p class="text-blue-100/80 leading-relaxed">{{ content.travel_text_2 }}</p>
+
+            <!-- Card 2 -->
+            <div class="bg-white/10 p-6 md:p-8 rounded-2xl backdrop-blur-sm border border-white/10 hover:bg-white/20 transition duration-300" data-aos="fade-up" data-aos-delay="200">
+                <div class="w-14 h-14 mx-auto bg-yellow-500/20 rounded-full flex items-center justify-center mb-4 text-yellow-400">
+                    <i class="ri-map-pin-line text-3xl"></i>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold mb-2">{{ content.travel_title_2 }}</h3>
+                <p class="text-sm text-blue-100 opacity-90 leading-relaxed">{{ content.travel_text_2 }}</p>
             </div>
-            <div class="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl hover:bg-white/15 transition" data-aos="fade-up" data-aos-delay="300">
-                <div class="w-14 h-14 bg-green-500 rounded-xl flex items-center justify-center text-white text-2xl mb-6"><i class="ri-hotel-bed-line"></i></div>
-                <h3 class="text-xl font-bold text-white mb-3">{{ content.travel_title_3 }}</h3>
-                <p class="text-blue-100/80 leading-relaxed">{{ content.travel_text_3 }}</p>
+
+            <!-- Card 3 -->
+            <div class="bg-white/10 p-6 md:p-8 rounded-2xl backdrop-blur-sm border border-white/10 hover:bg-white/20 transition duration-300" data-aos="fade-up" data-aos-delay="300">
+                <div class="w-14 h-14 mx-auto bg-yellow-500/20 rounded-full flex items-center justify-center mb-4 text-yellow-400">
+                    <i class="ri-hotel-bed-line text-3xl"></i>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold mb-2">{{ content.travel_title_3 }}</h3>
+                <p class="text-sm text-blue-100 opacity-90 leading-relaxed">{{ content.travel_text_3 }}</p>
             </div>
         </div>
     </div>
 </section>
-
-<!-- FOOTER -->
-<footer id="contacts" class="bg-slate-900 text-slate-300 pt-20 pb-10 relative overflow-hidden">
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
-    <div class="max-w-7xl mx-auto px-6 relative z-10">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-            <div class="md:col-span-1">
-                <h3 class="text-2xl font-serif text-white mb-6 italic">{{ content.footer_brand_title }}</h3>
-                <p class="text-sm leading-relaxed mb-6 text-slate-400">{{ content.footer_brand_desc }}</p>
-                <div class="flex gap-4">
-                    {% if content.social_fb %}<a href="{{ content.social_fb }}" target="_blank" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition"><i class="ri-facebook-fill"></i></a>{% endif %}
-                    {% if content.social_x %}<a href="{{ content.social_x }}" target="_blank" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-black hover:text-white transition"><i class="ri-twitter-x-line"></i></a>{% endif %}
-                    {% if content.social_ig %}<a href="{{ content.social_ig }}" target="_blank" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition"><i class="ri-instagram-line"></i></a>{% endif %}
-                </div>
-            </div>
-            <div>
-                <h4 class="text-white font-bold mb-6">{{ content.footer_links_title }}</h4>
-                <ul class="space-y-3 text-sm">
-                    <li><a href="{{ content.footer_link1_url }}" class="hover:text-yellow-400 transition">{{ content.footer_link1_text }}</a></li>
-                    <li><a href="{{ content.footer_link2_url }}" class="hover:text-yellow-400 transition">{{ content.footer_link2_text }}</a></li>
-                    <li><a href="{{ content.footer_link3_url }}" class="hover:text-yellow-400 transition">{{ content.footer_link3_text }}</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="text-white font-bold mb-6">{{ content.footer_contact_title }}</h4>
-                <ul class="space-y-4 text-sm">
-                    <li class="flex items-start gap-3"><i class="ri-map-pin-line text-yellow-500"></i><span>{{ content.contact_addr }}</span></li>
-                    <li class="flex items-center gap-3"><i class="ri-phone-line text-yellow-500"></i><span>{{ content.contact_phone }}</span></li>
-                    <li class="flex items-center gap-3"><i class="ri-mail-send-line text-yellow-500"></i><span>{{ content.contact_email }}</span></li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="text-white font-bold mb-6">{{ content.footer_em_title }}</h4>
-                <ul class="space-y-3 text-sm">
-                    <li class="flex justify-between border-b border-slate-800 pb-2"><span>{{ content.footer_em1_name }}</span><span class="text-white font-mono">{{ content.footer_em1_num }}</span></li>
-                    <li class="flex justify-between border-b border-slate-800 pb-2"><span>{{ content.footer_em2_name }}</span><span class="text-white font-mono">{{ content.footer_em2_num }}</span></li>
-                </ul>
-            </div>
-        </div>
-        <div class="border-t border-slate-800 pt-8 text-center text-xs text-slate-500"><p>{{ content.footer_copyright }}</p></div>
-    </div>
-</footer>
-
-<!-- SCRIPTS -->
-<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-<script>
-    AOS.init({ once: true, offset: 100, duration: 800, easing: 'ease-out-cubic' });
-
-    function scrollToID(id) {
-        const element = document.getElementById(id);
-        if(element) {
-            window.scrollTo({ top: element.offsetTop - 80, behavior: 'smooth' });
-        }
-    }
-
-    window.addEventListener('scroll', function() {
-        const nav = document.getElementById('navbar');
-        if (window.scrollY > 50) { nav.classList.add('shadow-lg', 'bg-slate-900/80'); nav.classList.remove('bg-white/10'); }
-        else { nav.classList.remove('shadow-lg', 'bg-slate-900/80'); nav.classList.add('bg-white/10'); }
-    });
-
-    // PAGINATION
-    document.addEventListener("DOMContentLoaded", function() {
-        const grid = document.getElementById('tourist-grid');
-        if (grid && grid.children.length > 0) {
-            const cards = Array.from(grid.getElementsByClassName('tourist-card'));
-            const controlsContainer = document.getElementById('pagination-controls');
-            const itemsPerPage = 8; 
-            const totalPages = Math.ceil(cards.length / itemsPerPage);
-            let currentPage = 1;
-
-            function showPage(page) {
-                const start = (page - 1) * itemsPerPage;
-                const end = start + itemsPerPage;
-                cards.forEach((card, index) => {
-                    card.removeAttribute('data-aos'); 
-                    if (index >= start && index < end) {
-                        card.classList.remove('hidden'); card.classList.add('fade-in'); 
-                        setTimeout(() => card.classList.remove('fade-in'), 500);
-                    } else { card.classList.add('hidden'); }
-                });
-                renderControls();
-            }
-
-            function renderControls() {
-                if(!controlsContainer) return;
-                controlsContainer.innerHTML = "";
-                if (totalPages <= 1) return;
-
-                const prevBtn = document.createElement('div');
-                prevBtn.className = `pagination-btn ${currentPage === 1 ? 'inactive opacity-50 cursor-not-allowed' : 'inactive'}`;
-                prevBtn.innerHTML = '<i class="ri-arrow-left-s-line"></i>';
-                prevBtn.onclick = () => { if(currentPage > 1) { currentPage--; showPage(currentPage); }};
-                controlsContainer.appendChild(prevBtn);
-
-                for(let i = 1; i <= totalPages; i++) {
-                    const btn = document.createElement('div');
-                    btn.className = `pagination-btn ${i === currentPage ? 'active' : 'inactive'}`;
-                    btn.innerText = i;
-                    btn.onclick = () => { currentPage = i; showPage(currentPage); };
-                    controlsContainer.appendChild(btn);
-                }
-
-                const nextBtn = document.createElement('div');
-                nextBtn.className = `pagination-btn ${currentPage === totalPages ? 'inactive opacity-50 cursor-not-allowed' : 'inactive'}`;
-                nextBtn.innerHTML = '<i class="ri-arrow-right-s-line"></i>';
-                nextBtn.onclick = () => { if(currentPage < totalPages) { currentPage++; showPage(currentPage); }};
-                controlsContainer.appendChild(nextBtn);
-            }
-            if (cards.length > 0) showPage(1);
-        }
-    });
-</script>
 {% endblock %}

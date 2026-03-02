@@ -1,0 +1,600 @@
+
+
+{% extends "base.html" %}
+
+{% block title %}Editor: History & Heritage | Admin Panel{% endblock %}
+
+{% block head %}
+<style>
+    .default-nav { display: none !important; }
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: #f1f5f9; }
+    textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    textarea::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .img-preview-box { position: relative; overflow: hidden; border-radius: 0.5rem; border: 1px solid #e2e8f0; background-color: #f8fafc; }
+    .img-preview-box img { width: 100%; height: 100%; object-fit: cover; }
+    .file-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: white; cursor: pointer; }
+    .img-preview-box:hover .file-overlay { opacity: 1; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block navbar %}
+<nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-8 shadow-sm">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('views.dashboard') }}" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition" title="Back to Dashboard">
+            <i class="ri-arrow-left-line text-xl"></i>
+        </a>
+        <div class="h-8 w-[1px] bg-slate-200 mx-2 hidden md:block"></div>
+        <div>
+            <h1 class="text-lg font-bold text-slate-800 leading-tight">Edit History Page</h1>
+            <p class="text-xs text-slate-400 hidden md:block">Managing Heritage, Origins, and Leaders</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{{ url_for('views.history') }}" target="_blank" class="hidden md:flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition px-3 py-2">
+            <i class="ri-eye-line"></i> Preview
+        </a>
+        <button type="submit" form="editForm" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg hover:shadow-blue-500/30 transition flex items-center gap-2">
+            <i class="ri-save-3-fill"></i> Save Changes
+        </button>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 pt-24 pb-20 px-4 md:px-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- LEFT COLUMN (Main Content) -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <form id="editForm" method="POST" enctype="multipart/form-data" class="space-y-8">
+                
+                <!-- CARD 1: Hero & Origins -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-article-line text-blue-500"></i>
+                        <h2 class="font-bold text-slate-700">Hero & Origins</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Page Hero Title</label>
+                                <input type="text" name="hist_hero_title" value="{{ content.hist_hero_title }}" 
+                                    class="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Hero Subtitle</label>
+                                <input type="text" name="hist_hero_sub" value="{{ content.hist_hero_sub }}" 
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-100 pt-6">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">"Our Origins" Headline</label>
+                            <input type="text" name="hist_org_title" value="{{ content.hist_org_title }}" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 mb-4 text-slate-800 font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                            
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Main Historical Narrative</label>
+                            <textarea name="hist_org_text" rows="8" 
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none resize-y">{{ content.hist_org_text }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: Padre Vicente Garcia Profile -->
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+        <i class="ri-quill-pen-line text-amber-700"></i>
+        <h2 class="font-bold text-slate-700">Padre Vicente Garcia Profile</h2>
+    </div>
+    
+    <div class="p-6">
+        <div class="flex flex-col md:flex-row gap-8">
+            
+            <!-- LEFT SIDE: IMAGE UPLOAD -->
+            <div class="w-full md:w-1/3 space-y-2">
+                <label class="block text-xs font-bold uppercase text-slate-500 tracking-wider">Portrait Image</label>
+                
+                <!-- Image Preview Box -->
+                <div class="img-preview-box w-full aspect-[3/4] bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 relative overflow-hidden group">
+                    <img src="{{ url_for('static', filename=content.hist_pg_img.replace('static/', '')) if 'static/uploads' in content.hist_pg_img else content.hist_pg_img }}" 
+                         class="w-full h-full object-cover">
+                    
+                    <!-- Overlay with File Input -->
+                    <label class="file-overlay absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-white">
+                        <i class="ri-camera-line text-3xl mb-2"></i>
+                        <span class="text-xs font-bold uppercase">Change Photo</span>
+                        <input type="file" name="hist_pg_img_file" accept="image/*" class="hidden">
+                    </label>
+                </div>
+                <p class="text-[10px] text-slate-400 text-center">Click image to upload new photo.</p>
+            </div>
+
+            <!-- RIGHT SIDE: TEXT & DETAILS -->
+            <div class="w-full md:w-2/3 space-y-5">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Name</label>
+                        <input type="text" name="hist_pg_title" value="{{ content.hist_pg_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:border-amber-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Dates / Subtitle</label>
+                        <input type="text" name="hist_pg_sub" value="{{ content.hist_pg_sub }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:border-amber-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Section Title</label>
+                    <input type="text" name="hist_pg_sect_title" value="{{ content.hist_pg_sect_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:border-amber-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Full Biography</label>
+                    <textarea name="hist_pg_text" rows="10" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:bg-white focus:border-amber-500 outline-none font-mono leading-relaxed resize-y custom-scroll">{{ content.hist_pg_text }}</textarea>
+                </div>
+
+                
+                <!-- FILE UPLOAD (SOFTCOPY) -->
+<div class="p-3 bg-blue-50 rounded border border-blue-100 flex items-center justify-between">
+    <div class="w-full">
+        <label class="block text-xs font-bold uppercase text-blue-600 mb-1">
+            Downloadable File (PDF / Word / Image)
+        </label>
+        
+        <!-- Updated accept attribute to include images -->
+        <input type="file" name="hist_pg_pdf" accept=".pdf,.doc,.docx,image/*" 
+               class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-blue-600 file:text-white cursor-pointer">
+        
+        <p class="text-[10px] text-slate-400 mt-1">
+            Supports PDF, DOC, DOCX, JPG, PNG. Visitors can download or view this file.
+        </p>
+    </div>
+
+    {% if content.hist_pg_file %}
+    <div class="ml-4 text-center">
+        <span class="text-green-600 text-lg block" title="File currently active">
+            <i class="ri-checkbox-circle-fill"></i>
+        </span>
+        <span class="text-[9px] text-green-700 font-bold uppercase">Active</span>
+    </div>
+    {% endif %}
+</div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Wikipedia Link</label>
+                    <div class="relative">
+                        <i class="ri-link absolute left-3 top-2.5 text-slate-400"></i>
+                        <input type="text" name="hist_pg_wiki" value="{{ content.hist_pg_wiki }}" class="w-full bg-white border border-slate-300 rounded pl-9 pr-3 py-2 text-sm text-blue-600 focus:border-amber-500 outline-none">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+                </form>
+
+                <!-- CARD 3: Mayors Generation -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-time-line text-purple-500"></i>
+                        <h2 class="font-bold text-slate-700">Mayors Generation</h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        <!-- Section Headers Form -->
+                        <form method="POST" class="mb-6 border-b border-slate-100 pb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Section Title</label>
+                                    <input type="text" name="hist_mayor_title" value="{{ content.hist_mayor_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 font-bold text-slate-700 focus:ring-2 focus:ring-purple-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Subtitle</label>
+                                    <input type="text" name="hist_mayor_sub" value="{{ content.hist_mayor_sub }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+                                </div>
+                            </div>
+                            <div class="mt-2 text-right">
+                                <button type="submit" class="text-xs text-purple-600 font-bold hover:underline">Update Headers</button>
+                            </div>
+                        </form>
+
+                        <!-- Existing Mayors List -->
+                        <div class="grid grid-cols-1 gap-4 mb-8">
+                            {% if mayors %}
+                                {% for mayor in mayors %}
+                                <div class="flex items-center gap-4 border border-slate-200 rounded-lg p-3 hover:shadow-sm transition">
+                                    <div class="w-12 h-16 shrink-0 bg-slate-100 rounded overflow-hidden">
+                                        <img src="{{ url_for('static', filename=mayor.image_url.replace('static/', '')) if mayor.image_url and 'static/uploads' in mayor.image_url else mayor.image_url }}" 
+                                             class="w-full h-full object-cover">
+                                    </div>
+                                    <div class="flex-grow min-w-0">
+                                        <h4 class="font-bold text-sm text-slate-800 truncate">{{ mayor.name }}</h4>
+                                        <p class="text-xs text-slate-500 truncate">{{ mayor.role }}</p>
+                                        <span class="inline-block bg-purple-50 text-purple-700 text-[10px] px-2 py-0.5 rounded font-bold mt-1">{{ mayor.years }}</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <!-- Edit Button -->
+                                        <button type="button" onclick="openMayorModal('{{ mayor.id }}', '{{ mayor.name }}', '{{ mayor.role }}', '{{ mayor.years }}')" 
+                                                class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition">
+                                            <i class="ri-pencil-line"></i>
+                                        </button>
+                                        <!-- Delete Button -->
+                                        <form method="POST" onsubmit="return confirm('Delete this mayor?');">
+                                            <input type="hidden" name="delete_mayor" value="true">
+                                            <input type="hidden" name="mayor_id" value="{{ mayor.id }}">
+                                            <button type="submit" class="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-6 text-slate-400 italic text-sm">No mayors added yet.</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Add Mayor Form -->
+                        <div class="bg-purple-50/50 rounded-lg p-5 border border-purple-100">
+                            <h4 class="text-xs font-bold text-purple-600 uppercase mb-4">Add New Mayor</h4>
+                            <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                                <input type="hidden" name="add_mayor" value="true">
+                                <div class="flex gap-4 items-start">
+                                    <div class="w-full space-y-3">
+                                        <input type="text" name="mayor_name" placeholder="Full Name (e.g. Hon. Juan Cruz)" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500">
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <input type="text" name="mayor_role" placeholder="Role (e.g. 5th Mayor)" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500">
+                                            <input type="text" name="mayor_years" placeholder="Term (e.g. 1999-2004)" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500">
+                                        </div>
+                                        <div class="flex items-center gap-2 bg-white border border-slate-300 rounded px-3 py-2">
+                                            <i class="ri-image-add-line text-slate-400"></i>
+                                            <input type="file" name="mayor_img" class="text-xs text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:bg-purple-100 file:text-purple-700 cursor-pointer">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="h-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex flex-col items-center justify-center gap-1 transition shadow-sm self-stretch">
+                                        <i class="ri-add-circle-line text-xl"></i>
+                                        <span>Add</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- CARD 4: Manage Barangays (Dynamic) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-map-2-line text-teal-600"></i>
+                        <h2 class="font-bold text-slate-700">Barangays & Captains</h2>
+                    </div>
+                    <div class="p-6">
+                        <!-- Headers Form -->
+                        <form method="POST" class="grid grid-cols-2 gap-4 mb-6 border-b border-slate-100 pb-4">
+                            <input type="text" name="hist_brgy_title" value="{{ content.hist_brgy_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 font-bold focus:ring-2 focus:ring-teal-500 outline-none">
+                            <input type="text" name="hist_brgy_sub" value="{{ content.hist_brgy_sub }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+                            <div class="col-span-2 text-right">
+                                <button type="submit" class="text-xs text-teal-600 font-bold hover:underline">Update Headers</button>
+                            </div>
+                        </form>
+
+                        <!-- Existing Barangays List -->
+                        <div class="space-y-3 mb-8 h-64 overflow-y-auto pr-2 custom-scroll">
+                            {% for brgy in barangays %}
+                            <div class="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold text-xs shrink-0 overflow-hidden">
+                                        {% if brgy.captain_image %}
+                                            <img src="{{ url_for('static', filename=brgy.captain_image.replace('static/', '')) if 'static/uploads' in brgy.captain_image else brgy.captain_image }}" class="w-full h-full object-cover">
+                                        {% else %}
+                                            {{ brgy.name[0] }}
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-700">{{ brgy.name }}</p>
+                                        <p class="text-[10px] text-slate-500">{{ brgy.captain_name or 'No Captain Set' }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <!-- Edit Button -->
+                                    <button type="button" onclick="openBrgyModal('{{ brgy.id }}', '{{ brgy.name }}', '{{ brgy.captain_name }}', '{{ brgy.map_url }}')" 
+                                            class="text-blue-500 hover:bg-blue-100 p-1 rounded transition">
+                                        <i class="ri-pencil-line"></i>
+                                    </button>
+                                    <!-- Delete Button -->
+                                    <form method="POST">
+                                        <input type="hidden" name="delete_barangay" value="true">
+                                        <input type="hidden" name="brgy_id" value="{{ brgy.id }}">
+                                        <button type="submit" class="text-red-400 hover:text-red-600 p-1" onclick="return confirm('Delete this barangay?')"><i class="ri-delete-bin-line"></i></button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Add Barangay Form -->
+                        <div class="bg-teal-50/50 rounded-lg p-5 border border-teal-100">
+                            <h4 class="text-xs font-bold text-teal-600 uppercase mb-4">Add New Barangay</h4>
+                            <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                                <input type="hidden" name="add_barangay" value="true">
+                                <input type="text" name="brgy_name" placeholder="Barangay Name (e.g. Poblacion)" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
+                                <input type="text" name="brgy_captain" placeholder="Captain Name (e.g. Hon. Juan)" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
+                                
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Barangay Captain Photo</label>
+                                    <div class="flex items-center gap-2 bg-white border border-slate-300 rounded px-3 py-2">
+                                        <i class="ri-image-user-line text-slate-400"></i>
+                                        <input type="file" name="brgy_img" class="text-xs text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:bg-teal-100 file:text-teal-700 cursor-pointer">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Google Maps Link</label>
+                                    <input type="text" name="brgy_map" placeholder="https://maps.google.com/..." class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 font-mono text-xs">
+                                </div>
+
+                                <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg font-bold text-sm transition mt-2">
+                                    <i class="ri-add-circle-line"></i> Add Barangay
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN (Visuals) -->
+            <div class="lg:col-span-1 space-y-8">
+                
+                <form id="editFormImages" method="POST" enctype="multipart/form-data" class="space-y-8">
+                
+                <!-- CARD 5: Primary Media -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-image-2-line text-green-500"></i>
+                        <h2 class="font-bold text-slate-700">Primary Media</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        
+                        <!-- Hero Image -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wider">Main Hero Banner</label>
+                            <div class="img-preview-box h-32 w-full">
+                                {% if content.hist_hero_img %}
+                                <img src="{{ url_for('static', filename=content.hist_hero_img.replace('static/', '')) if 'static/uploads' in content.hist_hero_img else content.hist_hero_img }}">
+                                {% endif %}
+                                <label class="file-overlay">
+                                    <i class="ri-upload-cloud-2-line text-2xl mb-1"></i>
+                                    <span class="text-[10px] uppercase font-bold">Update Hero</span>
+                                    <input type="file" form="editForm" name="hist_hero_img_file" class="hidden" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Padre Garcia Portrait -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wider">Padre Garcia Portrait</label>
+                            <div class="img-preview-box h-48 w-full">
+                                <img src="{{ url_for('static', filename=content.hist_pg_img.replace('static/', '')) if 'static/uploads' in content.hist_pg_img else content.hist_pg_img }}">
+                                <label class="file-overlay">
+                                    <i class="ri-user-line text-2xl mb-1"></i>
+                                    <span class="text-[10px] uppercase font-bold">Update Portrait</span>
+                                    <input type="file" form="editForm" name="hist_pg_img_file" class="hidden" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- CARD 6: Municipal Buildings -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-building-2-line text-orange-500"></i>
+                        <h2 class="font-bold text-slate-700">Municipal Buildings</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div class="pb-4 border-b border-slate-100">
+                            <input type="text" form="editForm" name="hist_build_title" value="{{ content.hist_build_title }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-sm font-bold mb-2 focus:bg-white outline-none">
+                            <input type="text" form="editForm" name="hist_build_sub" value="{{ content.hist_build_sub }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs focus:bg-white outline-none">
+                        </div>
+
+                        <!-- Buildings List -->
+                        <div class="space-y-4">
+                            <!-- B1 -->
+                            <div class="flex gap-3 items-center">
+                                <div class="w-16 h-16 shrink-0">
+                                    <div class="img-preview-box w-full h-full rounded">
+                                        <img src="{{ url_for('static', filename=content.hist_b1_img.replace('static/', '')) if 'static/uploads' in content.hist_b1_img else content.hist_b1_img }}">
+                                        <label class="file-overlay">
+                                            <i class="ri-upload-line"></i>
+                                            <input type="file" form="editForm" name="hist_b1_img_file" class="hidden" accept="image/*">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="w-full">
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">1. First Hall</label>
+                                    <input type="text" form="editForm" name="hist_b1_lbl" value="{{ content.hist_b1_lbl }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs focus:bg-white outline-none">
+                                </div>
+                            </div>
+                            
+                            <!-- B2 -->
+                            <div class="flex gap-3 items-center">
+                                <div class="w-16 h-16 shrink-0">
+                                    <div class="img-preview-box w-full h-full rounded">
+                                        <img src="{{ url_for('static', filename=content.hist_b2_img.replace('static/', '')) if 'static/uploads' in content.hist_b2_img else content.hist_b2_img }}">
+                                        <label class="file-overlay">
+                                            <i class="ri-upload-line"></i>
+                                            <input type="file" form="editForm" name="hist_b2_img_file" class="hidden" accept="image/*">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="w-full">
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">2. After Fire</label>
+                                    <input type="text" form="editForm" name="hist_b2_lbl" value="{{ content.hist_b2_lbl }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs focus:bg-white outline-none">
+                                </div>
+                            </div>
+
+                            <!-- B3 -->
+                            <div class="flex gap-3 items-center">
+                                <div class="w-16 h-16 shrink-0">
+                                    <div class="img-preview-box w-full h-full rounded">
+                                        <img src="{{ url_for('static', filename=content.hist_b3_img.replace('static/', '')) if 'static/uploads' in content.hist_b3_img else content.hist_b3_img }}">
+                                        <label class="file-overlay">
+                                            <i class="ri-upload-line"></i>
+                                            <input type="file" form="editForm" name="hist_b3_img_file" class="hidden" accept="image/*">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="w-full">
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">3. Renovation</label>
+                                    <input type="text" form="editForm" name="hist_b3_lbl" value="{{ content.hist_b3_lbl }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs focus:bg-white outline-none">
+                                </div>
+                            </div>
+
+                            <!-- B4 -->
+                            <div class="flex gap-3 items-center">
+                                <div class="w-16 h-16 shrink-0">
+                                    <div class="img-preview-box w-full h-full rounded">
+                                        <img src="{{ url_for('static', filename=content.hist_b4_img.replace('static/', '')) if 'static/uploads' in content.hist_b4_img else content.hist_b4_img }}">
+                                        <label class="file-overlay">
+                                            <i class="ri-upload-line"></i>
+                                            <input type="file" form="editForm" name="hist_b4_img_file" class="hidden" accept="image/*">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="w-full">
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">4. Modern</label>
+                                    <input type="text" form="editForm" name="hist_b4_lbl" value="{{ content.hist_b4_lbl }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs focus:bg-white outline-none">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================
+     MODAL: EDIT MAYOR
+========================== -->
+<div id="mayorModal" class="fixed inset-0 z-[99] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-4 border-b border-purple-100 pb-3">
+            <h3 class="font-bold text-purple-700 flex items-center gap-2"><i class="ri-edit-box-line"></i> Edit Mayor</h3>
+            <button onclick="closeModal('mayorModal')" class="text-slate-400 hover:text-red-500"><i class="ri-close-line text-xl"></i></button>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="edit_mayor" value="true">
+            <input type="hidden" id="editMayorId" name="mayor_id" value="">
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Name</label>
+                    <input type="text" id="editMayorName" name="mayor_name" class="w-full border rounded px-3 py-2 text-sm focus:border-purple-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Role</label>
+                        <input type="text" id="editMayorRole" name="mayor_role" class="w-full border rounded px-3 py-2 text-sm focus:border-purple-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Years</label>
+                        <input type="text" id="editMayorYears" name="mayor_years" class="w-full border rounded px-3 py-2 text-sm focus:border-purple-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Replace Image (Optional)</label>
+                    <input type="file" name="mayor_img" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-purple-100 file:text-purple-700">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" onclick="closeModal('mayorModal')" class="px-4 py-2 border rounded text-sm hover:bg-slate-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 font-bold">Update Mayor</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================
+     MODAL: EDIT BARANGAY
+========================== -->
+<div id="brgyModal" class="fixed inset-0 z-[99] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-4 border-b border-teal-100 pb-3">
+            <h3 class="font-bold text-teal-700 flex items-center gap-2"><i class="ri-edit-box-line"></i> Edit Barangay</h3>
+            <button onclick="closeModal('brgyModal')" class="text-slate-400 hover:text-red-500"><i class="ri-close-line text-xl"></i></button>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="edit_barangay" value="true">
+            <input type="hidden" id="editBrgyId" name="brgy_id" value="">
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Barangay Name</label>
+                    <input type="text" id="editBrgyName" name="brgy_name" class="w-full border rounded px-3 py-2 text-sm focus:border-teal-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Captain Name</label>
+                    <input type="text" id="editBrgyCapt" name="brgy_captain" class="w-full border rounded px-3 py-2 text-sm focus:border-teal-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Map URL</label>
+                    <input type="text" id="editBrgyMap" name="brgy_map" class="w-full border rounded px-3 py-2 text-sm font-mono focus:border-teal-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Replace Image (Optional)</label>
+                    <input type="file" name="brgy_img" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-teal-100 file:text-teal-700">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" onclick="closeModal('brgyModal')" class="px-4 py-2 border rounded text-sm hover:bg-slate-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded text-sm hover:bg-teal-700 font-bold">Update Barangay</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openMayorModal(id, name, role, years) {
+        document.getElementById('editMayorId').value = id;
+        document.getElementById('editMayorName').value = name;
+        document.getElementById('editMayorRole').value = role;
+        document.getElementById('editMayorYears').value = years;
+        document.getElementById('mayorModal').classList.remove('hidden');
+    }
+
+    function openBrgyModal(id, name, capt, map) {
+        document.getElementById('editBrgyId').value = id;
+        document.getElementById('editBrgyName').value = name;
+        document.getElementById('editBrgyCapt').value = capt === 'None' ? '' : capt;
+        document.getElementById('editBrgyMap').value = map === 'None' ? '' : map;
+        document.getElementById('brgyModal').classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+    
+    // Close modal on click outside
+    window.onclick = function(event) {
+        if (event.target.id === 'mayorModal') closeModal('mayorModal');
+        if (event.target.id === 'brgyModal') closeModal('brgyModal');
+    }
+</script>
+{% endblock %}
+
+{% block footer %}{% endblock %}

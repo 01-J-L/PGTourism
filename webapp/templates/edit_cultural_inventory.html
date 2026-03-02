@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Editor: Cultural Inventory | Admin Panel{% endblock %}
+
+{% block head %}
+<style>
+    /* Hide the default public navigation */
+    .default-nav { display: none !important; }
+    
+    /* Custom Scrollbar for textareas */
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: #f1f5f9; }
+    textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    textarea::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Image Preview Container */
+    .img-preview-box {
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+    }
+    .img-preview-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .file-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        color: white;
+        cursor: pointer;
+    }
+    .img-preview-box:hover .file-overlay {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{# --- EDITOR TOOLBAR --- #}
+{% block navbar %}
+<nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-8 shadow-sm">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('views.dashboard') }}" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition" title="Back to Dashboard">
+            <i class="ri-arrow-left-line text-xl"></i>
+        </a>
+        <div class="h-8 w-[1px] bg-slate-200 mx-2 hidden md:block"></div>
+        <div>
+            <h1 class="text-lg font-bold text-slate-800 leading-tight">Edit Cultural Inventory</h1>
+            <p class="text-xs text-slate-400 hidden md:block">Managing Church, History, and Monuments</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{{ url_for('views.culture') }}" target="_blank" class="hidden md:flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition px-3 py-2">
+            <i class="ri-eye-line"></i> Preview
+        </a>
+        <button type="submit" form="editForm" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg hover:shadow-blue-500/30 transition flex items-center gap-2">
+            <i class="ri-save-3-fill"></i> Save Changes
+        </button>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 pt-24 pb-20 px-4 md:px-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <form id="editForm" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- ========================== -->
+            <!-- LEFT COLUMN (Main Content) -->
+            <!-- ========================== -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- CARD 1: Hero Section -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-layout-top-line text-blue-500"></i>
+                        <h2 class="font-bold text-slate-700">Hero Section</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Main Title</label>
+                                <input type="text" name="cult_hero_title" value="{{ content.cult_hero_title }}" 
+                                    class="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 font-bold focus:ring-2 focus:ring-blue-500 outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Tagline</label>
+                                <input type="text" name="cult_hero_tag" value="{{ content.cult_hero_tag }}" 
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Subtitle</label>
+                            <input type="text" name="cult_hero_sub" value="{{ content.cult_hero_sub }}" 
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: Church Text Info -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-church-line text-blue-600"></i>
+                        <h2 class="font-bold text-slate-700">The Parish Details</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <input type="text" name="cult_church_title" value="{{ content.cult_church_title }}" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Historical Significance Title</label>
+                                <input type="text" name="cult_hist_title" value="{{ content.cult_hist_title }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 mb-2 focus:bg-white outline-none">
+                                <textarea name="cult_hist_text" rows="5" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm focus:bg-white outline-none">{{ content.cult_hist_text }}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Architecture Title</label>
+                                <input type="text" name="cult_arch_title" value="{{ content.cult_arch_title }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 mb-2 focus:bg-white outline-none">
+                                <textarea name="cult_arch_text" rows="5" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm focus:bg-white outline-none">{{ content.cult_arch_text }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Patroness Text -->
+                        <div class="border-t border-slate-100 pt-6">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wider">Patroness Information</label>
+                            <div class="space-y-4">
+                                <input type="text" name="cult_patron_title" value="{{ content.cult_patron_title }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:bg-white outline-none" placeholder="Title">
+                                <input type="text" name="cult_patron_sub" value="{{ content.cult_patron_sub }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm italic focus:bg-white outline-none" placeholder="Quote">
+                                <textarea name="cult_patron_text" rows="3" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm focus:bg-white outline-none">{{ content.cult_patron_text }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: Monuments (Text) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-user-star-line text-stone-600"></i>
+                        <h2 class="font-bold text-slate-700">Monuments (Text)</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" name="cult_mon_title" value="{{ content.cult_mon_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 font-bold focus:ring-2 focus:ring-stone-500 outline-none">
+                            <input type="text" name="cult_mon_sub" value="{{ content.cult_mon_sub }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-stone-500 outline-none">
+                        </div>
+
+                        <!-- Loop for 3 Monuments -->
+                        {% for i in range(1, 4) %}
+                        {% set n = i|string %}
+                        <div class="border border-slate-200 rounded-lg p-4 bg-slate-50/50">
+                            <label class="block text-xs font-bold uppercase text-slate-400 mb-2">Monument {{ i }} Info</label>
+                            <input type="text" name="cult_m{{n}}_name" value="{{ content['cult_m'+n+'_name'] }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm font-bold mb-2 focus:ring-1 focus:ring-stone-500 outline-none" placeholder="Name">
+                            <textarea name="cult_m{{n}}_desc" rows="3" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-stone-500 outline-none resize-none" placeholder="Description">{{ content['cult_m'+n+'_desc'] }}</textarea>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ========================== -->
+            <!-- RIGHT COLUMN (Visuals) -->
+            <!-- ========================== -->
+            <div class="lg:col-span-1 space-y-8">
+                
+                <!-- CARD 4: Hero Image -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-image-2-line text-green-500"></i>
+                        <h2 class="font-bold text-slate-700">Hero Background</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="img-preview-box h-32 w-full mb-2">
+                            {% if content.cult_hero_bg %}
+                            <img src="{{ url_for('static', filename=content.cult_hero_bg.replace('static/', '')) if 'static/uploads' in content.cult_hero_bg else content.cult_hero_bg }}">
+                            {% endif %}
+                            <label class="file-overlay">
+                                <i class="ri-upload-cloud-2-line text-2xl mb-1"></i>
+                                <span class="text-[10px] uppercase font-bold">Update Banner</span>
+                                <input type="file" name="cult_hero_bg_file" class="hidden" accept="image/*">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 5: Church Images -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-camera-lens-line text-blue-500"></i>
+                        <h2 class="font-bold text-slate-700">Church Images</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        
+                        <!-- Old Church -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Old Church</label>
+                            <input type="text" name="cult_old_lbl" value="{{ content.cult_old_lbl }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs mb-2">
+                            <div class="img-preview-box h-32 w-full">
+                                <img src="{{ url_for('static', filename=content.cult_old_img.replace('static/', '')) if 'static/uploads' in content.cult_old_img else content.cult_old_img }}">
+                                <label class="file-overlay">
+                                    <i class="ri-upload-line text-xl mb-1"></i>
+                                    <input type="file" name="cult_old_img_file" class="hidden" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- New Church -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Modern Structure</label>
+                            <input type="text" name="cult_new_lbl" value="{{ content.cult_new_lbl }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs mb-2">
+                            <div class="img-preview-box h-32 w-full">
+                                <img src="{{ url_for('static', filename=content.cult_new_img.replace('static/', '')) if 'static/uploads' in content.cult_new_img else content.cult_new_img }}">
+                                <label class="file-overlay">
+                                    <i class="ri-upload-line text-xl mb-1"></i>
+                                    <input type="file" name="cult_new_img_file" class="hidden" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Patroness -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Patroness Image</label>
+                            <div class="img-preview-box h-40 w-full">
+                                <img src="{{ url_for('static', filename=content.cult_patron_img.replace('static/', '')) if 'static/uploads' in content.cult_patron_img else content.cult_patron_img }}">
+                                <label class="file-overlay">
+                                    <i class="ri-upload-line text-xl mb-1"></i>
+                                    <input type="file" name="cult_patron_img_file" class="hidden" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- CARD 6: Monument Images -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-file-user-line text-stone-500"></i>
+                        <h2 class="font-bold text-slate-700">Monument Photos</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        {% for i in range(1, 4) %}
+                        {% set n = i|string %}
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Monument {{ i }}</label>
+                            <div class="img-preview-box h-24 w-full">
+                                <img src="{{ url_for('static', filename=content['cult_m'+n+'_img'].replace('static/', '')) if 'static/uploads' in content['cult_m'+n+'_img'] else content['cult_m'+n+'_img'] }}">
+                                <label class="file-overlay">
+                                    <i class="ri-upload-line"></i>
+                                    <input type="file" name="cult_m{{n}}_img_file" class="hidden" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block footer %}{% endblock %}

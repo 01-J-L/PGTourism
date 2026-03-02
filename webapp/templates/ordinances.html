@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Municipal Ordinances | Padre Garcia{% endblock %}
+
+{% block head %}
+<style>
+    /* Official Government Header Style */
+    .ordinance-hero {
+        background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(30, 58, 138, 0.9)),
+        url("{{ url_for('static', filename='images/municipal.jpg') }}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+
+    /* Table Styling */
+    .legis-table th {
+        font-family: 'Cinzel', serif;
+        letter-spacing: 0.05em;
+    }
+
+    .legis-row:hover {
+        background-color: #f8fafc;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO HEADER -->
+<header class="ordinance-hero h-[40vh] flex items-center justify-center relative pt-20">
+    <div class="text-center text-white z-10 px-4" data-aos="fade-up">
+        <div class="inline-block border border-yellow-500 px-4 py-1 rounded-full mb-3 bg-black/30 backdrop-blur-md">
+            <span class="text-yellow-400 uppercase tracking-[0.2em] text-xs font-bold">Sangguniang Bayan</span>
+        </div>
+        <h1 class="text-4xl md:text-6xl font-bold font-serif mb-2">Legislative Records</h1>
+        <p class="text-slate-300 font-light max-w-2xl mx-auto">
+            Official repository of Municipal Ordinances, Resolutions, and Executive Orders governing Padre Garcia.
+        </p>
+    </div>
+</header>
+
+<!-- ORDINANCES TABLE SECTION -->
+<section class="py-20 bg-slate-50 min-h-[60vh]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+
+        <!-- Search & Filter Bar -->
+        <div
+            class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800 font-serif">Ordinances</h2>
+                <p class="text-sm text-slate-500">Total Records: <span class="font-bold text-blue-600">{{
+                        ordinances|length }}</span></p>
+            </div>
+            <!-- LIVE SEARCH INPUT -->
+            <div class="relative w-full md:w-96">
+                <i class="ri-search-line absolute left-3 top-3 text-slate-400"></i>
+                <input type="text" id="ordinanceLocalSearch" placeholder="Search by title or number..."
+                    class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+            </div>
+        </div>
+
+        {% if ordinances %}
+        <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase text-xs legis-table">
+                            <th class="px-6 py-4 w-32">Ord. No.</th>
+                            <th class="px-6 py-4">Title & Description</th>
+                            <th class="px-6 py-4 w-40">Date Added</th>
+                            <th class="px-6 py-4 w-48 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100" id="ordinanceTableBody">
+                        {% for ord in ordinances %}
+                        <!-- Added class legis-row for JS filtering -->
+                        <tr class="legis-row transition duration-200">
+                            <!-- Number -->
+                            <td class="px-6 py-5 align-top">
+                                <span
+                                    class="bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1 rounded text-xs font-bold whitespace-nowrap">
+                                    {{ ord.number }}
+                                </span>
+                            </td>
+
+                            <!-- Title & Desc -->
+                            <td class="px-6 py-5 align-top">
+                                <h3 class="text-lg font-bold text-slate-800 mb-2 leading-tight">{{ ord.title }}</h3>
+                                <p class="text-sm text-slate-500 leading-relaxed line-clamp-2">
+                                    {{ ord.description }}
+                                </p>
+                            </td>
+
+                            <!-- Date -->
+                            <td class="px-6 py-5 align-top text-sm text-slate-500 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <i class="ri-calendar-line text-slate-400"></i>
+                                    {{ ord.date_added.strftime('%b %d, %Y') if ord.date_added else 'N/A' }}
+                                </div>
+                            </td>
+
+                            <!-- Action Button -->
+                            <td class="px-6 py-5 align-top text-right">
+                                {% if ord.file_url %}
+                                <a href="{{ url_for('views.download_watermarked', filename=ord.file_url.replace('static/', '')) }}"
+                                    target="_blank"
+                                    class="inline-flex items-center gap-2 bg-slate-800 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide transition shadow-lg hover:shadow-blue-500/30">
+                                    <i class="ri-file-download-line"></i> Download
+                                </a>
+                                {% else %}
+                                <span
+                                    class="inline-flex items-center gap-2 bg-slate-100 text-slate-400 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide cursor-not-allowed">
+                                    <i class="ri-file-forbid-line"></i> Restricted
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        <!-- Empty Message for JS Filtering -->
+                        <tr id="noRecordsRow" style="display: none;">
+                            <td colspan="4" class="px-6 py-12 text-center text-slate-500 italic">No ordinances found matching your search.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <!-- Empty State (When DB is completely empty) -->
+        <div class="text-center py-24 bg-white rounded-xl shadow-sm border border-dashed border-slate-300">
+            <div
+                class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 text-4xl mb-4">
+                <i class="ri-file-list-3-line"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-600 mb-1">No Ordinances Published</h3>
+            <p class="text-slate-400 text-sm">Please check back later for legislative updates.</p>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+<!-- LOCAL SEARCH SCRIPT -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById("ordinanceLocalSearch");
+        if(searchInput) {
+            searchInput.addEventListener("input", function(e) {
+                const term = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll(".legis-row");
+                const noRecordsRow = document.getElementById("noRecordsRow");
+                let hasVisible = false;
+                
+                rows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    if(text.includes(term)) {
+                        row.style.display = "";
+                        hasVisible = true;
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+
+                if(!hasVisible) {
+                    noRecordsRow.style.display = "";
+                } else {
+                    noRecordsRow.style.display = "none";
+                }
+            });
+        }
+    });
+</script>
+
+{% endblock %}

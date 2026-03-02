@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Kabakahan Festival | Padre Garcia{% endblock %}
+
+{% block head %}
+<style>
+    /* Festival Hero */
+    .festival-hero {
+        background: linear-gradient(to bottom, rgba(180, 83, 9, 0.8), rgba(120, 53, 15, 0.9)),
+        url("{{ url_for('static', filename=content.fest_hero_bg.replace('static/', '')) if 'static/uploads' in content.fest_hero_bg else content.fest_hero_bg }}");
+        background-size: cover;
+        background-position: center; 
+        background-attachment: fixed;
+    }
+    
+    .serif-head { font-family: 'Cinzel', serif; }
+    .serif-text { font-family: 'Playfair Display', serif; }
+
+    /* Paper/Ordinance Effect */
+    .ordinance-paper {
+        background-color: #fdf6e3;
+        background-image: url("https://www.transparenttextures.com/patterns/cream-paper.png");
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        border: 1px solid #d4c5a9;
+        position: relative;
+    }
+    .ordinance-paper::before {
+        content: ''; position: absolute; top: 0; bottom: 0; left: 40px; border-left: 2px solid #e5d5b7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<header class="festival-hero h-[60vh] flex items-center justify-center relative pt-20">
+    <div class="text-center text-white z-10 px-4" data-aos="zoom-in">
+        <div class="inline-block border-2 border-yellow-400 px-6 py-2 rounded-full mb-4 bg-black/20 backdrop-blur-sm">
+            <span class="text-yellow-400 uppercase tracking-[0.2em] text-xs font-bold">{{ content.fest_date_badge }}</span>
+        </div>
+        <h1 class="text-6xl md:text-8xl font-bold serif-head mb-4 drop-shadow-lg">{{ content.fest_hero_title }}</h1>
+        <p class="text-yellow-100 text-xl max-w-2xl mx-auto serif-text italic">
+            {{ content.fest_hero_sub }}
+        </p>
+    </div>
+</header>
+
+<!-- === INTRODUCTION === -->
+<section class="py-20 bg-white">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+        <h2 class="text-4xl font-bold text-slate-800 serif-head mb-6">{{ content.fest_intro_title }}</h2>
+        <p class="text-lg text-slate-600 leading-relaxed serif-text text-justify mb-8">
+            {{ content.fest_intro_text }}
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+            <div class="p-6 bg-orange-50 rounded-xl border border-orange-100" data-aos="fade-up" data-aos-delay="100">
+                <i class="ri-goblet-fill text-4xl text-orange-600 mb-3 block"></i>
+                <h4 class="font-bold text-slate-800">{{ content.fest_c1_title }}</h4>
+                <p class="text-sm text-slate-500">{{ content.fest_c1_desc }}</p>
+            </div>
+            <div class="p-6 bg-orange-50 rounded-xl border border-orange-100" data-aos="fade-up" data-aos-delay="200">
+                <i class="ri-money-dollar-circle-fill text-4xl text-orange-600 mb-3 block"></i>
+                <h4 class="font-bold text-slate-800">{{ content.fest_c2_title }}</h4>
+                <p class="text-sm text-slate-500">{{ content.fest_c2_desc }}</p>
+            </div>
+            <div class="p-6 bg-orange-50 rounded-xl border border-orange-100" data-aos="fade-up" data-aos-delay="300">
+                <i class="ri-hearts-fill text-4xl text-orange-600 mb-3 block"></i>
+                <h4 class="font-bold text-slate-800">{{ content.fest_c3_title }}</h4>
+                <p class="text-sm text-slate-500">{{ content.fest_c3_desc }}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- === LEGAL BASIS / ORDINANCE === -->
+<section class="py-20 bg-slate-100">
+    <div class="max-w-5xl mx-auto px-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            
+            <div data-aos="fade-right">
+                <h2 class="text-3xl font-bold text-slate-800 serif-head mb-4">{{ content.fest_legal_title }}</h2>
+                <p class="text-slate-600 mb-6">{{ content.fest_legal_desc }}</p>
+                <img src="{{ url_for('static', filename=content.fest_legal_img.replace('static/', '')) if 'static/uploads' in content.fest_legal_img else content.fest_legal_img }}" class="rounded-lg shadow-lg rotate-2 hover:rotate-0 transition duration-500">
+            </div>
+
+            <!-- Ordinance Document Style -->
+            <div class="ordinance-paper p-8 md:p-12" data-aos="fade-left">
+                <div class="text-center border-b-2 border-slate-300 pb-4 mb-6">
+                    <h3 class="font-bold text-slate-900 uppercase tracking-widest text-sm">Republic of the Philippines</h3>
+                    <p class="text-xs uppercase">Province of Batangas</p>
+                    <p class="text-xs uppercase mb-4">Municipality of Padre Garcia</p>
+                    <h4 class="font-bold text-xl serif-head text-slate-800">Municipal Ordinance</h4>
+                    <p class="text-sm font-bold text-slate-600">Institutionalizing the Kabakahan Festival</p>
+                </div>
+                
+                <div class="prose prose-sm text-slate-700 font-serif leading-relaxed pl-6 whitespace-pre-wrap">{{ content.fest_ord_text }}</div>
+                
+                <div class="mt-8 pt-6 border-t border-slate-300 flex justify-between items-end">
+                    <div class="w-16 h-16 bg-slate-200 rounded-full opacity-50 flex items-center justify-center">
+                        <i class="ri-quill-pen-line text-2xl text-slate-500"></i>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs font-bold text-slate-500 uppercase">Office of the Mayor</p>
+                        <p class="text-xs text-slate-400">Padre Garcia, Batangas</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- === PROGRAM & ACTIVITIES === -->
+<section class="py-24 bg-orange-900 text-orange-50 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+
+    <div class="max-w-5xl mx-auto px-6 relative z-10">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold serif-head text-yellow-400 mb-2">{{ content.fest_prog_title }}</h2>
+            <p class="text-orange-200">{{ content.fest_prog_sub }}</p>
+        </div>
+
+        <div class="space-y-8">
+            {% if events %}
+                {% for event in events %}
+                <div class="flex flex-col md:flex-row gap-6 items-center bg-white/10 p-6 rounded-2xl backdrop-blur-md border border-white/10 hover:bg-white/20 transition" data-aos="fade-up">
+                    <div class="w-24 h-24 flex-shrink-0 bg-yellow-500 rounded-xl flex flex-col items-center justify-center text-slate-900 shadow-lg">
+                        <span class="text-xs font-bold uppercase">{{ event.month }}</span>
+                        <span class="text-3xl font-bold">{{ event.day }}</span>
+                    </div>
+                    <div class="flex-grow text-center md:text-left">
+                        <h3 class="text-2xl font-bold text-white mb-2">{{ event.title }}</h3>
+                        <p class="text-orange-200 text-sm"><i class="ri-map-pin-line"></i> {{ event.location }}</p>
+                        <p class="mt-2 text-orange-100">{{ event.description }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-orange-300 italic">
+                    <p>Program schedule to be announced soon.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- === DYNAMIC IMAGE GALLERY (Mosaic Grid) === -->
+<section id="gallery" class="py-20 bg-white scroll-mt-20">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-12">
+            <h2 class="text-4xl font-bold text-slate-800 serif-head">{{ content.fest_gal_title }}</h2>
+            <div class="h-1 w-20 bg-orange-500 mx-auto mt-4"></div>
+        </div>
+
+        {% if gallery.items %}
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">
+                {% for img in gallery.items %}
+                    <!-- Logic to recreate the Mosaic Grid Layout -->
+                    {% set idx = loop.index0 % 4 %}
+                    {% set span_class = "col-span-1 row-span-1" %}
+                    {% if idx == 0 %}
+                        {% set span_class = "col-span-2 row-span-2" %}
+                    {% elif idx == 3 %}
+                        {% set span_class = "col-span-2 row-span-1" %}
+                    {% endif %}
+
+                    <div class="{{ span_class }} rounded-xl overflow-hidden shadow-lg group relative bg-slate-200">
+                        {% if img.link_url %}
+                            <!-- Image with Clickable Link -->
+                            <a href="{{ img.link_url }}" target="_blank" class="block w-full h-full relative cursor-pointer">
+                                <img src="{{ url_for('static', filename=img.image_url.replace('static/', '')) if 'static/uploads' in img.image_url else img.image_url }}" 
+                                     class="w-full h-full object-cover transition duration-700 group-hover:scale-110" alt="{{ img.caption }}">
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition duration-300 flex flex-col items-center justify-center p-4 text-center">
+                                    <div class="bg-white/90 text-slate-800 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 mb-2 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition">
+                                        <i class="ri-external-link-line"></i> View Link
+                                    </div>
+                                    {% if img.caption %}<span class="text-white text-xs font-bold drop-shadow-md">{{ img.caption }}</span>{% endif %}
+                                </div>
+                            </a>
+                        {% else %}
+                            <!-- Image Only -->
+                            <img src="{{ url_for('static', filename=img.image_url.replace('static/', '')) if 'static/uploads' in img.image_url else img.image_url }}" 
+                                 class="w-full h-full object-cover transition duration-700 group-hover:scale-110" alt="{{ img.caption }}">
+                            {% if img.caption %}
+                            <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition">
+                                <span class="text-white text-xs font-bold">{{ img.caption }}</span>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination Controls -->
+            {% if gallery.pages > 1 %}
+            <div class="mt-10 flex flex-wrap justify-center items-center gap-2" data-aos="fade-up">
+                {% if gallery.has_prev %}
+                <a href="{{ url_for('views.festival', page=gallery.prev_num, _anchor='gallery') }}" class="px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-orange-600 transition shadow-sm font-medium text-sm flex items-center gap-1"><i class="ri-arrow-left-line"></i> Prev</a>
+                {% else %}
+                <span class="px-3 py-2 bg-slate-50 border border-slate-100 text-slate-300 rounded-lg cursor-not-allowed font-medium text-sm flex items-center gap-1 opacity-60"><i class="ri-arrow-left-line"></i> Prev</span>
+                {% endif %}
+
+                {% for page_num in gallery.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                    {% if page_num %}
+                        {% if gallery.page == page_num %}
+                            <span class="w-9 h-9 flex items-center justify-center bg-orange-500 text-white rounded-lg font-bold shadow-md shadow-orange-500/30 text-sm">{{ page_num }}</span>
+                        {% else %}
+                            <a href="{{ url_for('views.festival', page=page_num, _anchor='gallery') }}" class="w-9 h-9 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-orange-600 transition text-sm font-medium">{{ page_num }}</a>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-slate-400 px-1 text-sm">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if gallery.has_next %}
+                <a href="{{ url_for('views.festival', page=gallery.next_num, _anchor='gallery') }}" class="px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-orange-600 transition shadow-sm font-medium text-sm flex items-center gap-1">Next <i class="ri-arrow-right-line"></i></a>
+                {% else %}
+                <span class="px-3 py-2 bg-slate-50 border border-slate-100 text-slate-300 rounded-lg cursor-not-allowed font-medium text-sm flex items-center gap-1 opacity-60">Next <i class="ri-arrow-right-line"></i></span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                <i class="ri-image-2-line text-4xl text-slate-300 mb-2"></i>
+                <p class="text-slate-500">No images have been added to the gallery yet.</p>
+            </div>
+        {% endif %}
+
+    </div>
+</section>
+
+{% endblock %}

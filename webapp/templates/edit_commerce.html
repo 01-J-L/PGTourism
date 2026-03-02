@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+
+{% block title %}Editor: Commerce | Admin Panel{% endblock %}
+
+{% block head %}
+<style>
+    .default-nav { display: none !important; }
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: #f1f5f9; }
+    textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    textarea::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .img-preview-box { position: relative; overflow: hidden; border-radius: 0.5rem; border: 1px solid #e2e8f0; background-color: #f8fafc; }
+    .img-preview-box img, .img-preview-box video { width: 100%; height: 100%; object-fit: cover; }
+    .file-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: white; cursor: pointer; }
+    .img-preview-box:hover .file-overlay { opacity: 1; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block navbar %}
+<nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-8 shadow-sm">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('views.dashboard') }}" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition" title="Back to Dashboard">
+            <i class="ri-arrow-left-line text-xl"></i>
+        </a>
+        <div class="h-8 w-[1px] bg-slate-200 mx-2 hidden md:block"></div>
+        <div>
+            <h1 class="text-lg font-bold text-slate-800 leading-tight">Edit Commercial Page</h1>
+            <p class="text-xs text-slate-400 hidden md:block">Managing Business, Dining, and Stay</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{{ url_for('views.commercial') }}" target="_blank" class="hidden md:flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition px-3 py-2">
+            <i class="ri-eye-line"></i> Preview
+        </a>
+        <button type="submit" form="staticForm" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg hover:shadow-blue-500/30 transition flex items-center gap-2">
+            <i class="ri-save-3-fill"></i> Save Static Changes
+        </button>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Master Form for Static Text/Images (Hidden wrapper) -->
+<form id="staticForm" method="POST" enctype="multipart/form-data" class="hidden"></form>
+
+<div class="min-h-screen bg-slate-50 pt-24 pb-20 px-4 md:px-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- LEFT COLUMN (Main Content) -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- CARD 1: Hero & Intro -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-store-3-line text-blue-500"></i>
+                        <h2 class="font-bold text-slate-700">Hero & Introduction</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Main Title</label>
+                                <input type="text" form="staticForm" name="comm_hero_title" value="{{ content.comm_hero_title }}" class="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 font-bold focus:ring-2 focus:ring-blue-500 outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Subtitle</label>
+                                <input type="text" form="staticForm" name="comm_hero_sub" value="{{ content.comm_hero_sub }}" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Hero Description</label>
+                            <textarea form="staticForm" name="comm_hero_desc" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">{{ content.comm_hero_desc }}</textarea>
+                        </div>
+                        
+                        <div class="border-t border-slate-100 pt-6">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Intro Headline</label>
+                            <input type="text" form="staticForm" name="comm_intro_title" value="{{ content.comm_intro_title }}" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 mb-4 font-bold outline-none focus:bg-white">
+                            
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wider">Intro Text</label>
+                            <textarea form="staticForm" name="comm_intro_text" rows="4" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">{{ content.comm_intro_text }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: Dynamic Establishments -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-restaurant-2-line text-orange-500"></i>
+                        <h2 class="font-bold text-slate-700">Dynamic Establishments (Dining)</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        
+                        <!-- Header Input (Linked to static form) -->
+                        <div class="mb-4 border-b border-slate-100 pb-4">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Section Title</label>
+                            <input type="text" form="staticForm" name="comm_dine_title" value="{{ content.comm_dine_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 font-bold focus:ring-2 focus:ring-orange-400 outline-none">
+                        </div>
+
+                        <!-- Existing Items List -->
+                        <div class="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scroll">
+                            {% if establishments %}
+                                {% for est in establishments %}
+                                <div class="flex items-start gap-4 border border-slate-200 rounded-lg p-3 hover:shadow-sm transition bg-slate-50">
+                                    <div class="w-16 h-16 shrink-0 bg-slate-200 rounded overflow-hidden">
+                                        {% if est.image_url %}
+                                        <img src="{{ url_for('static', filename=est.image_url.replace('static/', '')) if 'static/uploads' in est.image_url else est.image_url }}" class="w-full h-full object-cover">
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow min-w-0">
+                                        <h4 class="font-bold text-sm text-slate-800 truncate">{{ est.name }}</h4>
+                                        <p class="text-xs text-slate-500 line-clamp-1 mb-1">{{ est.description }}</p>
+                                        {% if est.map_url %}
+                                            <span class="inline-flex items-center text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-mono truncate max-w-[200px]"><i class="ri-map-pin-line mr-1"></i> Has Map</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <button type="button" onclick="openEstModal('{{ est.id }}', '{{ est.name|replace("'", "\\'") }}', `{{ est.description|replace("`", "\\`") }}`, '{{ est.map_url }}')" class="w-8 h-8 rounded bg-blue-100 text-blue-600 hover:bg-blue-500 hover:text-white flex items-center justify-center transition"><i class="ri-pencil-line"></i></button>
+                                        <form method="POST" onsubmit="return confirm('Delete this place?');">
+                                            <input type="hidden" name="delete_est" value="true">
+                                            <input type="hidden" name="est_id" value="{{ est.id }}">
+                                            <button type="submit" class="w-8 h-8 rounded bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition"><i class="ri-delete-bin-line"></i></button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-6 text-slate-400 italic text-sm">No places added yet.</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Add New Form -->
+                        <div class="bg-orange-50/50 rounded-lg p-5 border border-orange-100">
+                            <h4 class="text-xs font-bold text-orange-600 uppercase mb-4">Add New Place</h4>
+                            <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                                <input type="hidden" name="add_est" value="true">
+                                <input type="text" name="est_name" placeholder="Place Name (e.g. Lomi House)" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                                <textarea name="est_desc" placeholder="Description..." rows="2" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-500 resize-none"></textarea>
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Map Link (Optional)</label>
+                                    <input type="url" name="est_map" placeholder="https://maps.google.com/..." class="w-full border border-slate-300 rounded px-3 py-2 text-sm font-mono text-xs focus:outline-none focus:border-orange-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Cover Image</label>
+                                    <div class="flex items-center gap-2 bg-white border border-slate-300 rounded px-3 py-2">
+                                        <i class="ri-image-add-line text-slate-400"></i>
+                                        <input type="file" name="est_img" required class="text-xs text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:bg-orange-100 file:text-orange-700 cursor-pointer">
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-bold text-sm transition mt-2 shadow-sm"><i class="ri-add-circle-line"></i> Add Place</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: Dynamic Accommodations -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-hotel-bed-line text-teal-500"></i>
+                        <h2 class="font-bold text-slate-700">Dynamic Accommodations (Stay & Relax)</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        
+                        <div class="mb-4 border-b border-slate-100 pb-4 space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Section Title</label>
+                                <input type="text" form="staticForm" name="comm_stay_title" value="{{ content.comm_stay_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 font-bold focus:ring-2 focus:ring-teal-400 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Subtitle</label>
+                                <input type="text" form="staticForm" name="comm_stay_head" value="{{ content.comm_stay_head }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-teal-400 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Intro Description</label>
+                                <textarea form="staticForm" name="comm_stay_text" rows="2" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-teal-400 outline-none resize-none">{{ content.comm_stay_text }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Existing Accommodations List -->
+                        <div class="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scroll">
+                            {% if accommodations %}
+                                {% for acc in accommodations %}
+                                <div class="flex items-start gap-4 border border-slate-200 rounded-lg p-3 hover:shadow-sm transition bg-slate-50">
+                                    <div class="w-16 h-16 shrink-0 bg-slate-200 rounded overflow-hidden">
+                                        {% if acc.image_url %}
+                                        <img src="{{ url_for('static', filename=acc.image_url.replace('static/', '')) if 'static/uploads' in acc.image_url else acc.image_url }}" class="w-full h-full object-cover">
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow min-w-0">
+                                        <h4 class="font-bold text-sm text-slate-800 truncate">{{ acc.name }}</h4>
+                                        <p class="text-xs text-slate-500 line-clamp-1 mb-1">{{ acc.description }}</p>
+                                        {% if acc.map_url %}
+                                            <span class="inline-flex items-center text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-mono truncate max-w-[200px]"><i class="ri-map-pin-line mr-1"></i> Has Map</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <button type="button" onclick="openAccModal('{{ acc.id }}', '{{ acc.name|replace("'", "\\'") }}', `{{ acc.description|replace("`", "\\`") }}`, '{{ acc.map_url }}')" class="w-8 h-8 rounded bg-blue-100 text-blue-600 hover:bg-blue-500 hover:text-white flex items-center justify-center transition"><i class="ri-pencil-line"></i></button>
+                                        <form method="POST" onsubmit="return confirm('Delete this accommodation?');">
+                                            <input type="hidden" name="delete_acc" value="true">
+                                            <input type="hidden" name="acc_id" value="{{ acc.id }}">
+                                            <button type="submit" class="w-8 h-8 rounded bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition"><i class="ri-delete-bin-line"></i></button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-6 text-slate-400 italic text-sm">No accommodations added yet.</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Add New Accommodation Form -->
+                        <div class="bg-teal-50/50 rounded-lg p-5 border border-teal-100">
+                            <h4 class="text-xs font-bold text-teal-600 uppercase mb-4">Add New Accommodation</h4>
+                            <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                                <input type="hidden" name="add_acc" value="true">
+                                <input type="text" name="acc_name" placeholder="Resort/Inn Name" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
+                                <textarea name="acc_desc" placeholder="Description..." rows="2" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 resize-none"></textarea>
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Map Link (Optional)</label>
+                                    <input type="url" name="acc_map" placeholder="https://maps.google.com/..." class="w-full border border-slate-300 rounded px-3 py-2 text-sm font-mono text-xs focus:outline-none focus:border-teal-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Cover Image</label>
+                                    <div class="flex items-center gap-2 bg-white border border-slate-300 rounded px-3 py-2">
+                                        <i class="ri-image-add-line text-slate-400"></i>
+                                        <input type="file" name="acc_img" required class="text-xs text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-teal-100 file:text-teal-700 cursor-pointer">
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-teal-500 hover:bg-teal-600 text-white py-2 rounded-lg font-bold text-sm transition mt-2 shadow-sm"><i class="ri-add-circle-line"></i> Add Accommodation</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 4: Dynamic Financial Institutions -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-bank-card-line text-slate-700"></i>
+                        <h2 class="font-bold text-slate-700">Financial Institutions</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        
+                        <!-- Header Inputs (Linked to static form) -->
+                        <div class="mb-4 border-b border-slate-100 pb-4 space-y-3">
+                            <input type="text" form="staticForm" name="comm_fin_title" value="{{ content.comm_fin_title }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 font-bold outline-none focus:bg-white" placeholder="Section Title">
+                            <textarea form="staticForm" name="comm_fin_text" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 outline-none focus:bg-white resize-none" placeholder="Description">{{ content.comm_fin_text }}</textarea>
+                        </div>
+
+                        <!-- Existing Banks List -->
+                        <div class="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scroll">
+                            {% if banks %}
+                                {% for bank in banks %}
+                                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200 hover:shadow-sm transition">
+                                    <div class="flex-grow min-w-0 pr-4">
+                                        <p class="font-bold text-sm text-slate-800 truncate">{{ bank.name }}</p>
+                                        <p class="text-[10px] text-slate-500 font-mono truncate">{{ bank.url or 'No Link' }}</p>
+                                    </div>
+                                    <div class="flex gap-2 shrink-0">
+                                        <button type="button" onclick="openBankModal('{{ bank.id }}', '{{ bank.name|replace("'", "\\'") }}', '{{ bank.url }}')" class="w-7 h-7 rounded bg-slate-200 text-slate-600 hover:bg-slate-600 hover:text-white flex items-center justify-center transition"><i class="ri-pencil-line text-xs"></i></button>
+                                        <form method="POST" onsubmit="return confirm('Delete this institution?');">
+                                            <input type="hidden" name="delete_bank" value="true">
+                                            <input type="hidden" name="bank_id" value="{{ bank.id }}">
+                                            <button type="submit" class="w-7 h-7 rounded bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition"><i class="ri-delete-bin-line text-xs"></i></button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-xs text-slate-400 italic text-center py-4">No banks/tags added yet.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Add New Bank Form -->
+                        <div class="bg-slate-100/50 rounded-lg p-4 border border-slate-200">
+                            <h4 class="text-xs font-bold text-slate-600 uppercase mb-3">Add New Tag</h4>
+                            <form method="POST" class="flex flex-col md:flex-row gap-3">
+                                <input type="hidden" name="add_bank" value="true">
+                                <input type="text" name="bank_name" placeholder="Bank Name (e.g. BDO)" required class="w-full md:w-1/3 border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-slate-500">
+                                <input type="url" name="bank_url" placeholder="https://... (Optional)" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-slate-500">
+                                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm transition shrink-0">Add</button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN (Visuals & Static Sub-sections) -->
+            <div class="lg:col-span-1 space-y-8">
+                
+                <!-- Hero Image -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-image-2-line text-green-500"></i>
+                        <h2 class="font-bold text-slate-700">Hero Background</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="img-preview-box h-32 w-full">
+                            {% if content.comm_hero_bg %}
+                            <img src="{{ url_for('static', filename=content.comm_hero_bg.replace('static/', '')) if 'static/uploads' in content.comm_hero_bg else content.comm_hero_bg }}">
+                            {% endif %}
+                            <label class="file-overlay">
+                                <i class="ri-upload-cloud-2-line text-2xl mb-1"></i>
+                                <span class="text-[10px] uppercase font-bold">Update Banner</span>
+                                <input type="file" form="staticForm" name="comm_hero_bg_file" class="hidden" accept="image/*">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shopping Section Static (UPDATED TO ALLOW VIDEO) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-shopping-bag-3-line text-purple-500"></i>
+                        <h2 class="font-bold text-slate-700">Shopping Overview</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <input type="text" form="staticForm" name="comm_shop_title" value="{{ content.comm_shop_title }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-sm font-bold">
+                        <input type="text" form="staticForm" name="comm_shop_head" value="{{ content.comm_shop_head }}" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-sm">
+                        <textarea form="staticForm" name="comm_shop_text" rows="4" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs outline-none focus:bg-white resize-none">{{ content.comm_shop_text }}</textarea>
+
+                        <div class="space-y-2 pt-2 border-t border-slate-100">
+                            <label class="block text-[10px] font-bold uppercase text-slate-400">List Items</label>
+                            <input type="text" form="staticForm" name="comm_shop_li1" value="{{ content.comm_shop_li1 }}" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+                            <input type="text" form="staticForm" name="comm_shop_li2" value="{{ content.comm_shop_li2 }}" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+                            <input type="text" form="staticForm" name="comm_shop_li3" value="{{ content.comm_shop_li3 }}" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+                        </div>
+
+                        <label class="block text-xs font-bold uppercase text-slate-500 mt-4 mb-1">Section Media (Image or Video)</label>
+                        <div class="img-preview-box h-40 w-full">
+                            {% set shop_media = content.comm_shop_img %}
+                            {% if shop_media %}
+                                {% if shop_media.endswith('.mp4') or shop_media.endswith('.webm') %}
+                                    <video src="{{ url_for('static', filename=shop_media.replace('static/', '')) if 'static/uploads' in shop_media else shop_media }}" class="w-full h-full object-cover" autoplay muted loop></video>
+                                {% else %}
+                                    <img src="{{ url_for('static', filename=shop_media.replace('static/', '')) if 'static/uploads' in shop_media else shop_media }}" class="w-full h-full object-cover">
+                                {% endif %}
+                            {% endif %}
+                            <label class="file-overlay">
+                                <i class="ri-upload-line text-xl mb-1"></i>
+                                <span class="text-[10px] uppercase font-bold">Upload Media</span>
+                                <input type="file" form="staticForm" name="comm_shop_img_file" class="hidden" accept="image/*,video/mp4,video/webm">
+                            </label>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1">Accepts images (.jpg, .png) or short videos (.mp4).</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================
+     MODAL: EDIT ESTABLISHMENT
+========================== -->
+<div id="estModal" class="fixed inset-0 z-[99] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-4 border-b border-orange-100 pb-3">
+            <h3 class="font-bold text-orange-600 flex items-center gap-2"><i class="ri-edit-box-line"></i> Edit Place</h3>
+            <button onclick="closeModal('estModal')" class="text-slate-400 hover:text-red-500"><i class="ri-close-line text-xl"></i></button>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="edit_est" value="true">
+            <input type="hidden" id="editEstId" name="est_id" value="">
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Name</label>
+                    <input type="text" id="editEstName" name="est_name" required class="w-full border rounded px-3 py-2 text-sm focus:border-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Description</label>
+                    <textarea id="editEstDesc" name="est_desc" rows="3" class="w-full border rounded px-3 py-2 text-sm focus:border-orange-500 outline-none resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Map URL</label>
+                    <input type="url" id="editEstMap" name="est_map" class="w-full border rounded px-3 py-2 text-sm font-mono focus:border-orange-500 outline-none">
+                </div>
+                <div class="bg-orange-50 p-3 rounded border border-orange-100">
+                    <label class="block text-xs font-bold text-orange-700 mb-1">Replace Image (Optional)</label>
+                    <input type="file" name="est_img" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-white file:text-orange-700 cursor-pointer">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" onclick="closeModal('estModal')" class="px-4 py-2 border rounded-lg text-sm hover:bg-slate-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600 font-bold">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================
+     MODAL: EDIT ACCOMMODATION
+========================== -->
+<div id="accModal" class="fixed inset-0 z-[99] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-4 border-b border-teal-100 pb-3">
+            <h3 class="font-bold text-teal-600 flex items-center gap-2"><i class="ri-edit-box-line"></i> Edit Accommodation</h3>
+            <button onclick="closeModal('accModal')" class="text-slate-400 hover:text-red-500"><i class="ri-close-line text-xl"></i></button>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="edit_acc" value="true">
+            <input type="hidden" id="editAccId" name="acc_id" value="">
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Name</label>
+                    <input type="text" id="editAccName" name="acc_name" required class="w-full border rounded px-3 py-2 text-sm focus:border-teal-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Description</label>
+                    <textarea id="editAccDesc" name="acc_desc" rows="3" class="w-full border rounded px-3 py-2 text-sm focus:border-teal-500 outline-none resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Map URL</label>
+                    <input type="url" id="editAccMap" name="acc_map" class="w-full border rounded px-3 py-2 text-sm font-mono focus:border-teal-500 outline-none">
+                </div>
+                <div class="bg-teal-50 p-3 rounded border border-teal-100">
+                    <label class="block text-xs font-bold text-teal-700 mb-1">Replace Image (Optional)</label>
+                    <input type="file" name="acc_img" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-white file:text-teal-700 cursor-pointer">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" onclick="closeModal('accModal')" class="px-4 py-2 border rounded-lg text-sm hover:bg-slate-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-500 text-white rounded-lg text-sm hover:bg-teal-600 font-bold">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================
+     MODAL: EDIT BANK
+========================== -->
+<div id="bankModal" class="fixed inset-0 z-[99] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+        <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="ri-edit-box-line"></i> Edit Tag</h3>
+            <button onclick="closeModal('bankModal')" class="text-slate-400 hover:text-red-500"><i class="ri-close-line text-xl"></i></button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="edit_bank" value="true">
+            <input type="hidden" id="editBankId" name="bank_id" value="">
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Name</label>
+                    <input type="text" id="editBankName" name="bank_name" required class="w-full border rounded px-3 py-2 text-sm focus:border-slate-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">URL (Optional)</label>
+                    <input type="url" id="editBankUrl" name="bank_url" class="w-full border rounded px-3 py-2 text-sm font-mono focus:border-slate-500 outline-none">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" onclick="closeModal('bankModal')" class="px-4 py-2 border rounded-lg text-sm hover:bg-slate-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-900 font-bold">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEstModal(id, name, desc, map) {
+        document.getElementById('editEstId').value = id;
+        document.getElementById('editEstName').value = name;
+        document.getElementById('editEstDesc').value = desc === 'None' ? '' : desc;
+        document.getElementById('editEstMap').value = map === 'None' ? '' : map;
+        document.getElementById('estModal').classList.remove('hidden');
+    }
+
+    function openAccModal(id, name, desc, map) {
+        document.getElementById('editAccId').value = id;
+        document.getElementById('editAccName').value = name;
+        document.getElementById('editAccDesc').value = desc === 'None' ? '' : desc;
+        document.getElementById('editAccMap').value = map === 'None' ? '' : map;
+        document.getElementById('accModal').classList.remove('hidden');
+    }
+
+    function openBankModal(id, name, url) {
+        document.getElementById('editBankId').value = id;
+        document.getElementById('editBankName').value = name;
+        document.getElementById('editBankUrl').value = url === 'None' ? '' : url;
+        document.getElementById('bankModal').classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+    
+    window.onclick = function(event) {
+        if (event.target.id === 'estModal') closeModal('estModal');
+        if (event.target.id === 'accModal') closeModal('accModal');
+        if (event.target.id === 'bankModal') closeModal('bankModal');
+    }
+</script>
+{% endblock %}
+
+{% block footer %}{% endblock %}

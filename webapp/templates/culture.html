@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Cultural Inventory | Padre Garcia{% endblock %}
+
+{% block head %}
+<style>
+    /* Specific Hero for Culture */
+    .culture-hero {
+        background: linear-gradient(to right, rgba(28, 25, 23, 0.9), rgba(67, 56, 202, 0.8)),
+        url("{{ url_for('static', filename=content.cult_hero_bg.replace('static/', '')) if 'static/uploads' in content.cult_hero_bg else content.cult_hero_bg }}"); 
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+    
+    .serif-title { font-family: 'Cinzel', serif; }
+    .serif-text { font-family: 'Playfair Display', serif; }
+    
+    /* Image Frame Effect */
+    .antique-frame {
+        border: 8px solid #fff;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        position: relative;
+        cursor: pointer;
+    }
+    .antique-frame::after {
+        content: ''; position: absolute; inset: 0;
+        border: 1px solid rgba(0,0,0,0.1);
+        pointer-events: none;
+    }
+    
+    /* Hover Icon for Lightbox */
+    .hover-zoom-icon {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .group:hover .hover-zoom-icon {
+        opacity: 1;
+    }
+
+    /* Modal custom scrollbar */
+    .modal-scroll::-webkit-scrollbar { width: 6px; }
+    .modal-scroll::-webkit-scrollbar-track { background: transparent; }
+    .modal-scroll::-webkit-scrollbar-thumb { background: #57534e; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO HEADER -->
+<header class="culture-hero h-[45vh] flex items-center justify-center relative pt-20">
+    <div class="text-center text-white z-10 px-4" data-aos="fade-up">
+        <span class="text-yellow-400 uppercase tracking-[0.2em] text-xs font-bold mb-3 block">{{ content.cult_hero_tag }}</span>
+        <h1 class="text-4xl md:text-6xl font-bold serif-title mb-2">{{ content.cult_hero_title }}</h1>
+        <p class="text-slate-300 font-light serif-text italic">{{ content.cult_hero_sub }}</p>
+    </div>
+</header>
+
+<!-- === SECTION 1: MOST HOLY ROSARY PARISH === -->
+<section class="py-20 bg-stone-50">
+    <div class="max-w-7xl mx-auto px-6">
+        
+        <!-- Section Title -->
+        <div class="text-center mb-16" data-aos="fade-up">
+            <h2 class="text-4xl font-bold text-stone-800 serif-title mb-4">{{ content.cult_church_title }}</h2>
+            <div class="h-1 w-24 bg-yellow-500 mx-auto"></div>
+        </div>
+
+        <!-- OLD vs NEW COMPARISON -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 mb-16">
+            <!-- OLD (Uses Image Lightbox) -->
+            <div class="relative group" data-aos="fade-right" 
+                 onclick="openImageModal('{{ url_for('static', filename=content.cult_old_img.replace('static/', '')) if 'static/uploads' in content.cult_old_img else content.cult_old_img }}')">
+                <div class="antique-frame bg-sepia-200 overflow-hidden">
+                    <img src="{{ url_for('static', filename=content.cult_old_img.replace('static/', '')) if 'static/uploads' in content.cult_old_img else content.cult_old_img }}" 
+                         class="w-full h-80 object-cover sepia filter hover:sepia-0 hover:scale-105 transition duration-700">
+                    <div class="hover-zoom-icon"><i class="ri-zoom-in-line text-white text-3xl"></i></div>
+                </div>
+                <div class="mt-4 text-center">
+                    <span class="bg-stone-800 text-white px-4 py-1 text-sm font-bold uppercase tracking-widest">{{ content.cult_old_lbl }}</span>
+                </div>
+            </div>
+
+            <!-- NEW (Uses Image Lightbox) -->
+            <div class="relative group" data-aos="fade-left"
+                 onclick="openImageModal('{{ url_for('static', filename=content.cult_new_img.replace('static/', '')) if 'static/uploads' in content.cult_new_img else content.cult_new_img }}')">
+                <div class="antique-frame overflow-hidden">
+                    <img src="{{ url_for('static', filename=content.cult_new_img.replace('static/', '')) if 'static/uploads' in content.cult_new_img else content.cult_new_img }}" 
+                         class="w-full h-80 object-cover hover:scale-105 transition duration-700">
+                    <div class="hover-zoom-icon"><i class="ri-zoom-in-line text-white text-3xl"></i></div>
+                </div>
+                <div class="mt-4 text-center">
+                    <span class="bg-blue-800 text-white px-4 py-1 text-sm font-bold uppercase tracking-widest">{{ content.cult_new_lbl }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTORY & ARCHITECTURE -->
+        <div class="bg-white p-8 md:p-12 rounded-xl shadow-xl border-t-4 border-yellow-500 mb-16" data-aos="fade-up">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h3 class="text-2xl font-bold text-stone-800 serif-title mb-4 flex items-center gap-2">
+                        <i class="ri-history-line text-yellow-600"></i> {{ content.cult_hist_title }}
+                    </h3>
+                    <p class="text-stone-600 leading-relaxed text-justify mb-4 serif-text whitespace-pre-wrap">{{ content.cult_hist_text }}</p>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-stone-800 serif-title mb-4 flex items-center gap-2">
+                        <i class="ri-building-2-line text-yellow-600"></i> {{ content.cult_arch_title }}
+                    </h3>
+                    <p class="text-stone-600 leading-relaxed text-justify mb-4 serif-text whitespace-pre-wrap">{{ content.cult_arch_text }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAMA MARY SPOTLIGHT (Uses Image Lightbox) -->
+        <div class="flex flex-col md:flex-row items-center gap-10 bg-blue-900 text-white rounded-2xl overflow-hidden shadow-2xl" data-aos="zoom-in">
+            <div class="w-full md:w-1/3 h-96 relative cursor-pointer group"
+                 onclick="openImageModal('{{ url_for('static', filename=content.cult_patron_img.replace('static/', '')) if 'static/uploads' in content.cult_patron_img else content.cult_patron_img }}')">
+                 <img src="{{ url_for('static', filename=content.cult_patron_img.replace('static/', '')) if 'static/uploads' in content.cult_patron_img else content.cult_patron_img }}" 
+                      class="w-full h-full object-cover group-hover:scale-105 transition duration-700">
+                 <div class="absolute inset-0 bg-gradient-to-t from-blue-900 to-transparent"></div>
+                 <div class="hover-zoom-icon"><i class="ri-zoom-in-line text-white text-3xl"></i></div>
+            </div>
+            <div class="w-full md:w-2/3 p-8 md:p-12">
+                <h3 class="text-3xl font-bold serif-title text-yellow-400 mb-4">{{ content.cult_patron_title }}</h3>
+                <p class="text-blue-100 leading-relaxed text-lg serif-text italic mb-6">{{ content.cult_patron_sub }}</p>
+                <p class="text-blue-200 leading-relaxed text-justify whitespace-pre-wrap">{{ content.cult_patron_text }}</p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- === SECTION 2: MONUMENTS (USES NEW POP-OUT CARD MODAL) === -->
+<section class="py-20 bg-stone-900 text-stone-100">
+    <div class="max-w-7xl mx-auto px-6">
+        
+        <div class="text-center mb-16" data-aos="fade-up">
+            <h2 class="text-4xl font-bold text-white serif-title mb-4">{{ content.cult_mon_title }}</h2>
+            <p class="text-stone-400">{{ content.cult_mon_sub }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {% for i in range(1, 4) %}
+            {% set n = i|string %}
+            
+            <!-- Monument Card - Triggers Info Card Modal -->
+            <div class="bg-stone-800 rounded-xl overflow-hidden border border-stone-700 hover:border-yellow-600 transition group cursor-pointer flex flex-col" 
+                 data-aos="fade-up" data-aos-delay="{{ i * 100 }}"
+                 data-name="{{ content['cult_m'+n+'_name'] | escape }}"
+                 data-img="{{ url_for('static', filename=content['cult_m'+n+'_img'].replace('static/', '')) if 'static/uploads' in content['cult_m'+n+'_img'] else content['cult_m'+n+'_img'] }}"
+                 data-desc="{{ content['cult_m'+n+'_desc'] | escape }}"
+                 onclick="openCultureModal(this)">
+                
+                <div class="h-64 overflow-hidden relative shrink-0">
+                    <img src="{{ url_for('static', filename=content['cult_m'+n+'_img'].replace('static/', '')) if 'static/uploads' in content['cult_m'+n+'_img'] else content['cult_m'+n+'_img'] }}" 
+                         class="w-full h-full object-cover group-hover:scale-105 transition duration-700 sepia hover:sepia-0">
+                    <!-- Icon indicating read more -->
+                    <div class="hover-zoom-icon"><i class="ri-article-line text-white text-4xl drop-shadow-lg"></i></div>
+                </div>
+                
+                <div class="p-6 flex-grow flex flex-col">
+                    <h3 class="text-xl font-bold text-yellow-500 serif-title mb-2">{{ content['cult_m'+n+'_name'] }}</h3>
+                    <!-- Truncated text on main card -->
+                    <p class="text-stone-300 text-sm leading-relaxed text-justify line-clamp-3 mb-4">
+                        {{ content['cult_m'+n+'_desc'] }}
+                    </p>
+                    <div class="mt-auto pt-2 border-t border-stone-700">
+                        <span class="text-yellow-600 text-xs font-bold uppercase tracking-wider flex items-center gap-1 group-hover:text-yellow-400 transition">
+                            Read More <i class="ri-arrow-right-line"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ==========================================
+     MODALS
+=========================================== -->
+
+<!-- 1. POP-OUT CARD MODAL (For Monuments) -->
+<div id="cultureModal" class="fixed inset-0 z-[9998] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-opacity duration-300 opacity-0">
+    <div class="bg-stone-900 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border-2 border-stone-700 relative text-white flex flex-col max-h-[90vh] transform scale-95 transition-transform duration-300">
+        
+        <button onclick="closeCultureModal()" class="absolute top-3 right-3 z-50 text-white/70 hover:text-white hover:bg-black/50 p-2 rounded-full transition flex items-center justify-center">
+            <i class="ri-close-line text-2xl"></i>
+        </button>
+        
+        <!-- Image Header -->
+        <div class="h-64 sm:h-72 shrink-0 relative">
+            <img id="cultureModalImg" src="" class="w-full h-full object-cover sepia-0">
+            <!-- Fade to dark gradient -->
+            <div class="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/40 to-transparent"></div>
+        </div>
+        
+        <!-- Content Area (Scrollable) -->
+        <div class="p-8 pt-2 overflow-y-auto modal-scroll relative">
+            <!-- Texture -->
+            <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] pointer-events-none"></div>
+            
+            <div class="relative z-10">
+                <h2 id="cultureModalTitle" class="text-3xl md:text-4xl font-bold font-cinzel mb-4 text-yellow-500 tracking-wide drop-shadow-md"></h2>
+                <div class="w-12 h-1 bg-yellow-600 mb-6"></div>
+                <p id="cultureModalDesc" class="text-stone-300 leading-loose text-justify whitespace-pre-wrap font-playfair text-lg"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. PURE IMAGE LIGHTBOX MODAL (For Church & Patroness) -->
+<div id="imageModal" 
+     class="fixed inset-0 z-[9999] hidden flex items-center justify-center bg-black/90 backdrop-blur-md p-4 transition-opacity duration-300 opacity-0" 
+     onclick="closeImageModal()">
+    
+    <button onclick="closeImageModal()" class="absolute top-4 right-4 md:top-8 md:right-8 z-50 text-white/60 hover:text-white transition transform hover:scale-110">
+        <i class="ri-close-circle-line text-5xl"></i>
+    </button>
+    
+    <div class="relative max-w-5xl max-h-[90vh] w-full h-full flex justify-center items-center">
+        <img id="lightboxImage" src="" 
+             class="max-w-full max-h-full object-contain rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] border-4 border-stone-700 transition-all duration-300" 
+             onclick="event.stopPropagation()">
+    </div>
+</div>
+
+<!-- SCRIPTS -->
+<script>
+    /* --- POP-OUT CARD MODAL LOGIC --- */
+    function openCultureModal(element) {
+        const name = element.getAttribute('data-name');
+        const img = element.getAttribute('data-img');
+        const desc = element.getAttribute('data-desc');
+
+        document.getElementById('cultureModalTitle').innerText = name;
+        document.getElementById('cultureModalDesc').innerText = desc;
+        document.getElementById('cultureModalImg').src = img;
+
+        const modal = document.getElementById('cultureModal');
+        const modalContent = modal.querySelector('div');
+        
+        modal.classList.remove('hidden');
+        
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modalContent.classList.remove('scale-95');
+        }, 10);
+        
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCultureModal() {
+        const modal = document.getElementById('cultureModal');
+        const modalContent = modal.querySelector('div');
+        
+        modal.classList.add('opacity-0');
+        modalContent.classList.add('scale-95');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }, 300);
+    }
+
+    /* --- IMAGE LIGHTBOX LOGIC --- */
+    function openImageModal(src) {
+        const modal = document.getElementById('imageModal');
+        const img = document.getElementById('lightboxImage');
+        
+        img.src = src;
+        modal.classList.remove('hidden');
+        
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+        }, 10);
+        
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeImageModal() {
+        const modal = document.getElementById('imageModal');
+        modal.classList.add('opacity-0');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            document.getElementById('lightboxImage').src = ""; 
+        }, 300);
+    }
+    
+    /* --- EVENT LISTENERS --- */
+    // Close modals when clicking outside inner containers
+    window.onclick = function (event) {
+        if (event.target == document.getElementById('cultureModal')) {
+            closeCultureModal();
+        }
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(event){
+        if(event.key === "Escape"){
+            if(!document.getElementById('imageModal').classList.contains('hidden')){
+                closeImageModal();
+            }
+            if(!document.getElementById('cultureModal').classList.contains('hidden')){
+                closeCultureModal();
+            }
+        }
+    });
+</script>
+
+{% endblock %}

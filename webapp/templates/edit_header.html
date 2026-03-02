@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Edit Header & Logo | Admin{% endblock %}
+
+{% block head %}
+<style>
+    .default-nav { display: none !important; }
+    .img-preview-box {
+        position: relative; overflow: hidden; border-radius: 0.5rem; 
+        border: 1px solid #e2e8f0; background-color: #f8fafc;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .file-overlay {
+        position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
+        display: flex; flex-direction: column; align-items: center; 
+        justify-content: center; opacity: 0; transition: opacity 0.2s; 
+        color: white; cursor: pointer;
+    }
+    .img-preview-box:hover .file-overlay { opacity: 1; }
+</style>
+{% endblock %}
+
+{% block navbar %}
+<nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200 h-16 flex items-center px-4 md:px-8 justify-between shadow-sm">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('views.dashboard') }}" class="text-slate-500 hover:text-slate-800"><i class="ri-arrow-left-line text-xl"></i></a>
+        <div>
+            <h1 class="font-bold text-slate-800 text-lg leading-tight">Header Configuration</h1>
+            <p class="text-xs text-slate-400">Manage Website Logo</p>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="pt-24 pb-20 px-4 md:px-8 max-w-2xl mx-auto">
+    
+    <div class="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+            <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-xl"><i class="ri-image-edit-line"></i></div>
+            <h3 class="font-bold text-lg text-slate-700">Website Logo</h3>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+            
+            <div class="mb-6">
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Current Logo</label>
+                <div class="img-preview-box h-40 w-full bg-slate-900"> <!-- Dark bg to see white logos -->
+                    {% if content.site_logo %}
+                        <img src="{{ url_for('static', filename=content.site_logo.replace('static/', '')) if 'static/uploads' in content.site_logo else content.site_logo }}" class="h-full w-auto object-contain">
+                    {% else %}
+                        <div class="text-white/50 flex flex-col items-center">
+                            <i class="ri-image-line text-4xl mb-2"></i>
+                            <span class="text-xs">No Custom Logo Uploaded</span>
+                        </div>
+                    {% endif %}
+                    
+                    <label class="file-overlay">
+                        <i class="ri-upload-cloud-2-line text-3xl mb-2"></i>
+                        <span class="text-xs font-bold uppercase">Click to Upload New Logo</span>
+                        <input type="file" name="site_logo_file" class="hidden" accept="image/*" onchange="this.form.submit()">
+                    </label>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2">
+                    Recommended: PNG with transparent background. Max height: 100px.
+                </p>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+{% block footer %}{% endblock %}

@@ -1,0 +1,222 @@
+
+
+{% extends "base.html" %}
+
+{% block title %}Editor: About Us | Admin Panel{% endblock %}
+
+{% block head %}
+<style>
+    .default-nav { display: none !important; }
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: #f1f5f9; }
+    textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    textarea::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block navbar %}
+<nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-8 shadow-sm">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('views.dashboard') }}" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition" title="Back to Dashboard">
+            <i class="ri-arrow-left-line text-xl"></i>
+        </a>
+        <div class="h-8 w-[1px] bg-slate-200 mx-2 hidden md:block"></div>
+        <div>
+            <h1 class="text-lg font-bold text-slate-800 leading-tight">Edit About Page</h1>
+            <p class="text-xs text-slate-400 hidden md:block">Changes reflect immediately upon saving</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{{ url_for('views.about') }}" target="_blank" class="hidden md:flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition px-3 py-2">
+            <i class="ri-eye-line"></i> Preview
+        </a>
+        <button type="submit" form="editForm" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg hover:shadow-blue-500/30 transition flex items-center gap-2">
+            <i class="ri-save-3-fill"></i> Save Changes
+        </button>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 pt-24 pb-20 px-4 md:px-8">
+    <div class="max-w-6xl mx-auto">
+        
+        <form id="editForm" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- LEFT COLUMN (Main Text Areas) -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- CARD 1: HERO SECTION -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-layout-top-line text-blue-500"></i>
+                        <h2 class="font-bold text-slate-700">Hero Section</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Small Badge Text</label>
+                            <input type="text" name="about_hero_badge" value="{{ content.about_hero_badge }}" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Main Headline</label>
+                            <input type="text" name="about_hero_h1" value="{{ content.about_hero_h1 }}" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Subtitle</label>
+                            <textarea name="about_hero_sub" rows="2" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none">{{ content.about_hero_sub }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: INTRODUCTION -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-article-line text-blue-500"></i>
+                        <h2 class="font-bold text-slate-700">Introduction & Story</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Section Badge</label>
+                                <input type="text" name="about_intro_badge" value="{{ content.about_intro_badge }}" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Headline</label>
+                                <input type="text" name="about_title" value="{{ content.about_title }}" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:border-blue-500">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Main Story Text</label>
+                            <textarea name="about_text" rows="12" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-slate-700 leading-relaxed focus:bg-white focus:outline-none focus:border-blue-500 resize-y">{{ content.about_text }}</textarea>
+                        </div>
+
+                        <!-- Mini Features -->
+                        <div class="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Feature 1 (Icon: History)</label>
+                                <input type="text" name="about_feat1_title" value="{{ content.about_feat1_title }}" class="w-full border border-slate-300 rounded px-2 py-1 mb-1 text-sm font-bold placeholder-slate-400" placeholder="Title">
+                                <input type="text" name="about_feat1_desc" value="{{ content.about_feat1_desc }}" class="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-500 placeholder-slate-400" placeholder="Desc">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Feature 2 (Icon: Trade)</label>
+                                <input type="text" name="about_feat2_title" value="{{ content.about_feat2_title }}" class="w-full border border-slate-300 rounded px-2 py-1 mb-1 text-sm font-bold placeholder-slate-400" placeholder="Title">
+                                <input type="text" name="about_feat2_desc" value="{{ content.about_feat2_desc }}" class="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-500 placeholder-slate-400" placeholder="Desc">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: MISSION & VISION -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-compass-3-line text-yellow-600"></i>
+                        <h2 class="font-bold text-slate-700">Strategic Direction</h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="text" name="about_dir_title" value="{{ content.about_dir_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 font-bold focus:outline-none focus:border-yellow-500" placeholder="Section Title">
+                            <input type="text" name="about_dir_sub" value="{{ content.about_dir_sub }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow-500" placeholder="Subtitle">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Mission</label>
+                                <textarea name="mission_text" rows="5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:bg-white focus:outline-none focus:border-yellow-500">{{ content.mission_text }}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Vision</label>
+                                <textarea name="vision_text" rows="5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:bg-white focus:outline-none focus:border-yellow-500">{{ content.vision_text }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN (Media, Stats, CTA) -->
+            <div class="lg:col-span-1 space-y-8">
+                
+                <!-- CARD 4: Featured Image -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-image-line text-green-500"></i>
+                        <h2 class="font-bold text-slate-700">Featured Image</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            {% if content.about_image_path %}
+                            <div class="relative rounded-lg overflow-hidden border border-slate-200 shadow-sm group">
+                                <img src="{{ url_for('static', filename=content.about_image_path.replace('static/', '')) if 'static/uploads' in content.about_image_path else content.about_image_path }}" 
+                                     class="w-full h-48 object-cover">
+                            </div>
+                            {% else %}
+                            <div class="w-full h-48 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 border border-dashed border-slate-300">
+                                <span class="text-sm">No image set</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Image Caption</label>
+                            <input type="text" name="about_img_caption" value="{{ content.about_img_caption }}" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs italic text-slate-600 focus:outline-none focus:border-green-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Upload New</label>
+                            <input type="file" name="about_image_file" accept="image/*" 
+                                class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 5: Fast Facts -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-bar-chart-box-line text-purple-500"></i>
+                        <h2 class="font-bold text-slate-700">Fast Facts</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Founding Year</label>
+                            <input type="text" name="fact_year" value="{{ content.fact_year }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm focus:bg-white focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">No. of Barangays</label>
+                            <input type="text" name="fact_barangays" value="{{ content.fact_barangays }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm focus:bg-white focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Population</label>
+                            <input type="text" name="fact_population" value="{{ content.fact_population }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm focus:bg-white focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Festival Date</label>
+                            <input type="text" name="fact_festival" value="{{ content.fact_festival }}" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm focus:bg-white focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 6: Call To Action -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center gap-2">
+                        <i class="ri-megaphone-line text-orange-500"></i>
+                        <h2 class="font-bold text-slate-700">Bottom CTA</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">CTA Headline</label>
+                            <input type="text" name="about_cta_title" value="{{ content.about_cta_title }}" class="w-full bg-white border border-slate-300 rounded px-3 py-2 font-bold text-sm focus:outline-none focus:border-orange-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">CTA Text</label>
+                            <textarea name="about_cta_text" rows="3" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs focus:bg-white focus:outline-none focus:border-orange-500 resize-none">{{ content.about_cta_text }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}{% endblock %}
