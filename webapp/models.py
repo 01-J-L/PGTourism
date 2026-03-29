@@ -61,6 +61,7 @@ class Mayor(db.Model):
     role = db.Column(db.String(150), nullable=True)
     years = db.Column(db.String(50), nullable=True)
     image_url = db.Column(db.String(500), nullable=True)
+    description = db.Column(db.Text, nullable=True)
 
 class Barangay(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -112,20 +113,32 @@ class FinancialInstitution(db.Model):
     name = db.Column(db.String(100), nullable=False)
     url = db.Column(db.String(500), nullable=True)
 
+# === UPDATED MAJOR ATTRACTION AND NEW MEDIA TABLE ===
 class MajorAttraction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
-    tag = db.Column(db.String(50), nullable=True) # e.g., "Nature", "Leisure", "Est. 1952"
-    description = db.Column(db.Text, nullable=True)
+    tag = db.Column(db.String(50), nullable=True)
+    description = db.Column(db.Text, nullable=True) # Short description for cards
     location = db.Column(db.String(150), nullable=True)
     map_url = db.Column(db.String(500), nullable=True)
-    # THIS IS THE CORRECTED LINE
-    media_url = db.Column(db.String(500), nullable=True)
+    media_url = db.Column(db.String(500), nullable=True) # Hero/Featured media
+    full_content = db.Column(db.Text, nullable=True) # Main article text
+    
+    # Relationship to media items
+    media_items = db.relationship('AttractionMedia', backref='attraction', lazy=True, cascade="all, delete-orphan")
+
+class AttractionMedia(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    attraction_id = db.Column(db.Integer, db.ForeignKey('major_attraction.id'), nullable=False)
+    media_url = db.Column(db.String(500), nullable=False)
+    media_type = db.Column(db.String(20), nullable=False) # 'image', 'video', 'file'
+    caption = db.Column(db.String(300), nullable=True)
+# ====================================================
 
 class FoodDish(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
-    tagline = db.Column(db.String(150), nullable=True) # e.g., "Signature Dish"
+    tagline = db.Column(db.String(150), nullable=True)
     description = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(500), nullable=True)
     link_url = db.Column(db.String(500), nullable=True)
@@ -141,4 +154,13 @@ class FestivalGalleryImage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     image_url = db.Column(db.String(500), nullable=False)
     link_url = db.Column(db.String(500), nullable=True)
-    caption = db.Column(db.String(200), nullable=True) # Optional short description
+    caption = db.Column(db.String(200), nullable=True)
+
+class HistoryMedia(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    # A key to identify which history section this media belongs to (e.g., 'padre_garcia')
+    section_key = db.Column(db.String(100), nullable=False, index=True)
+    media_url = db.Column(db.String(500), nullable=False)
+    media_type = db.Column(db.String(20), nullable=False)  # 'image' or 'video'
+    caption = db.Column(db.String(300), nullable=True)
+    order = db.Column(db.Integer, default=0)

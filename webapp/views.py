@@ -3,12 +3,16 @@ from flask_login import login_required, current_user
 from flask_mail import Message
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
+from flask import jsonify
 
 import os
 import uuid
 import io
-import datetime # Import datetime to get current year for email footer
+import datetime 
+import tempfile
+import re # Added for ordinance sorting
 
+from docx2pdf import convert
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
@@ -16,18 +20,70 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.colors import Color
 import math
 from reportlab.lib.utils import ImageReader
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from sqlalchemy import or_
 from . import db, mail
 
 # Update this line to include all your models
-from .models import User, SiteContent, TouristSpot, Ordinance, SocialLink, FooterLink, EmergencyHotline, Mayor, Barangay, FestivalEvent, CommercialEstablishment, Accommodation, FinancialInstitution, MajorAttraction, FoodDish, SweetTreat, FestivalGalleryImage
+from .models import User, SiteContent, TouristSpot, Ordinance, SocialLink, FooterLink, EmergencyHotline, Mayor, Barangay, FestivalEvent, CommercialEstablishment, Accommodation, FinancialInstitution, MajorAttraction, FoodDish, SweetTreat, FestivalGalleryImage, AttractionMedia, HistoryMedia
 
 views = Blueprint("views", __name__)
 
 # =========================================
+#               TEMPLATE FILTERS
+# =========================================
+
+@views.app_template_filter('get_file_icon')
+def get_file_icon(filename):
+    """Returns a Remix Icon class based on the file extension."""
+    if not filename:
+        return 'ri-file-list-3-line'
+        
+    ext = filename.split('.')[-1].lower()
+    
+    if ext == 'pdf':
+        return 'ri-file-pdf-line'
+    elif ext in ['doc', 'docx']:
+        return 'ri-file-word-line'
+    elif ext in ['xls', 'xlsx', 'csv']:
+        return 'ri-file-excel-line'
+    elif ext in ['ppt', 'pptx']:
+        return 'ri-file-ppt-line'
+    elif ext in ['zip', 'rar', '7z', 'tar']:
+        return 'ri-file-zip-line'
+    elif ext in ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp']:
+        return 'ri-image-line'
+    elif ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']:
+        return 'ri-film-line'
+    else:
+        return 'ri-file-list-3-line'
+
+# =========================================
 #               HELPER FUNCTIONS
 # ==========================================
+
+def get_ord_sort_key(ord_obj):
+    """
+    Parses ordinance numbers to sort Year Latest to Oldest (Desc), 
+    then Sequence Number Ascending.
+    """
+    text = str(ord_obj.number).strip()
+    nums = re.findall(r'\d+', text)
+    if len(nums) >= 2:
+        # Check which one is the 4 digit year
+        if len(nums[0]) == 4:
+            return (-int(nums[0]), int(nums[1]), text)
+        elif len(nums[1]) == 4:
+            return (-int(nums[1]), int(nums[0]), text)
+        else:
+            return (-int(nums[0]), int(nums[1]), text)
+    elif len(nums) == 1:
+        return (-int(nums[0]), 0, text)
+    else:
+        return (0, 0, text)
 
 def get_font(font_size):
     """Tries to load a system scalable font. Fallbacks if running on bare Linux."""
@@ -159,15 +215,57 @@ def global_search():
         'ordinances': [],
         'events': [],
         'pages': [],
+        'attractions': [], 
+        'history': [],     
+        'commerce': [],    
+        'food': [],        
         'total': 0
     }
     
     if q:
         search_term = f"%{q}%"
+        
+        # 1. Tourist Spots
         results['spots'] = TouristSpot.query.filter(or_(TouristSpot.name.ilike(search_term), TouristSpot.description.ilike(search_term))).all()
+        
+        # 2. Ordinances (With new sort logic)
         results['ordinances'] = Ordinance.query.filter(or_(Ordinance.title.ilike(search_term), Ordinance.number.ilike(search_term), Ordinance.description.ilike(search_term))).all()
+        results['ordinances'] = sorted(results['ordinances'], key=get_ord_sort_key)
+
+        # 3. Festival Events
         results['events'] = FestivalEvent.query.filter(or_(FestivalEvent.title.ilike(search_term), FestivalEvent.description.ilike(search_term), FestivalEvent.location.ilike(search_term))).all()
         
+        # 4. Major Attractions
+        results['attractions'] = MajorAttraction.query.filter(or_(MajorAttraction.name.ilike(search_term), MajorAttraction.description.ilike(search_term), MajorAttraction.location.ilike(search_term))).all()
+
+        # 5. History & Heritage (Mayors + Barangays)
+        mayors = Mayor.query.filter(or_(Mayor.name.ilike(search_term), Mayor.role.ilike(search_term), Mayor.years.ilike(search_term))).all()
+        brgys = Barangay.query.filter(or_(Barangay.name.ilike(search_term), Barangay.captain_name.ilike(search_term))).all()
+        for m in mayors:
+            results['history'].append({'title': m.name, 'desc': f"Role: {m.role or 'N/A'} | Years: {m.years or 'N/A'}", 'type': 'Leader/Mayor'})
+        for b in brgys:
+            results['history'].append({'title': f"Barangay {b.name}", 'desc': f"Barangay Captain: {b.captain_name or 'N/A'}", 'type': 'Barangay'})
+
+        # 6. Commerce & Lifestyle (Establishments + Accommodations + Banks)
+        ests = CommercialEstablishment.query.filter(or_(CommercialEstablishment.name.ilike(search_term), CommercialEstablishment.description.ilike(search_term))).all()
+        accs = Accommodation.query.filter(or_(Accommodation.name.ilike(search_term), Accommodation.description.ilike(search_term))).all()
+        banks = FinancialInstitution.query.filter(FinancialInstitution.name.ilike(search_term)).all()
+        for e in ests:
+            results['commerce'].append({'title': e.name, 'desc': e.description, 'type': 'Dining/Shopping', 'url_anchor': '#establishments'})
+        for a in accs:
+            results['commerce'].append({'title': a.name, 'desc': a.description, 'type': 'Accommodation', 'url_anchor': '#accommodations'})
+        for b in banks:
+            results['commerce'].append({'title': b.name, 'desc': 'Financial Institution / Bank', 'type': 'Bank', 'url_anchor': ''})
+
+        # 7. Food & Delicacies (Dishes + Sweets)
+        dishes = FoodDish.query.filter(or_(FoodDish.name.ilike(search_term), FoodDish.description.ilike(search_term), FoodDish.tagline.ilike(search_term))).all()
+        sweets = SweetTreat.query.filter(or_(SweetTreat.name.ilike(search_term), SweetTreat.description.ilike(search_term))).all()
+        for d in dishes:
+            results['food'].append({'title': d.name, 'desc': d.description, 'type': 'Local Dish'})
+        for s in sweets:
+            results['food'].append({'title': s.name, 'desc': s.description, 'type': 'Sweet/Pasalubong'})
+
+        # 8. Static Pages Map (Keywords)
         pages_map = {
             'About Us': {'url': url_for('views.about'), 'icon': 'ri-information-line', 'desc': 'Discover the history, culture, and vision behind the municipality.', 'keywords': ['about', 'history', 'mission', 'vision', 'heritage', 'lumang bayan', 'mayor', 'town']},
             'History & Heritage': {'url': url_for('views.history'), 'icon': 'ri-hourglass-line', 'desc': 'Learn about Padre Vicente Garcia and the generations of Mayors.', 'keywords': ['history', 'mayor', 'vicente garcia', 'barangay', 'origin', 'heritage']},
@@ -196,7 +294,10 @@ def global_search():
             if match:
                 results['pages'].append({'name': page_name, 'url': info['url'], 'icon': info['icon'], 'desc': info['desc']})
 
-        results['total'] = len(results['spots']) + len(results['ordinances']) + len(results['events']) + len(results['pages'])
+        # Calculate Total Results found
+        results['total'] = (len(results['spots']) + len(results['ordinances']) + len(results['events']) + 
+                            len(results['pages']) + len(results['attractions']) + len(results['history']) + 
+                            len(results['commerce']) + len(results['food']))
 
     return render_template("search_results.html", content=content, query=q, results=results)
 
@@ -231,88 +332,121 @@ def about():
 
 @views.route("/download/<path:filename>")
 def download_watermarked(filename):
-    clean_filename = filename.replace('static/', '')
+    clean_filename = filename.replace('static/uploads/', '').replace('static/images/', '').replace('static/', '')
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
-    possible_paths = [
-        os.path.join(base_dir, 'static', 'uploads', clean_filename),
-        os.path.join(base_dir, 'static', 'images', clean_filename),
-        os.path.join(base_dir, 'static', clean_filename)
-    ]
-
-    file_path = None
-    for path in possible_paths:
-        if os.path.exists(path):
-            file_path = path
-            break
+    # 1. Resolve File Path
+    full_file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], clean_filename)
+    if not os.path.exists(full_file_path):
+        full_file_path = os.path.join(base_dir, 'static', 'images', clean_filename)
+    if not os.path.exists(full_file_path):
+        full_file_path = os.path.join(base_dir, 'static', clean_filename)
     
-    if not file_path:
-        return abort(404)
+    if not os.path.exists(full_file_path):
+        current_app.logger.warning(f"File not found for download: {filename}")
+        abort(404)
 
-    logo_path = os.path.join(base_dir, 'static', 'images', 'logo_watermark.png')
-    has_logo = os.path.exists(logo_path)
+    ext = full_file_path.split('.')[-1].lower()
+    new_filename_prefix = "PG_Tourism_" 
+    new_download_name = f"{new_filename_prefix}{os.path.basename(clean_filename)}"
+    dl = request.args.get('dl', '0') == '1'
+    temp_pdf_path = None
+
+    # ==========================================
+    # INTERCEPT: CONVERT DOCX/DOC TO PDF
+    # ==========================================
+    if ext in ['doc', 'docx']:
+        try:
+            # Create a temporary PDF file to hold the conversion
+            temp_fd, temp_pdf_path = tempfile.mkstemp(suffix='.pdf')
+            os.close(temp_fd) 
+            
+            # Convert the Word Doc to PDF
+            convert(full_file_path, temp_pdf_path)
+            
+            # Now treat this file as a PDF for the rest of the script
+            full_file_path = temp_pdf_path
+            ext = 'pdf'
+            
+            # Change the download filename extension to .pdf
+            new_download_name = new_download_name.rsplit('.', 1)[0] + '.pdf'
+            
+        except Exception as e:
+            current_app.logger.error(f"Error converting DOCX to PDF: {e}")
+            # If conversion fails, it falls back to the original docx later in the script
+
+    # 2. Fetch the "Site Logo" from the database or use default
+    logo_setting = SiteContent.query.filter_by(key='site_logo').first()
+    has_logo = False
     
-    ext = file_path.split('.')[-1].lower()
-    new_filename = f"PG_Tourism_{os.path.basename(clean_filename)}"
+    if logo_setting and logo_setting.value:
+        logo_path = os.path.join(current_app.root_path, logo_setting.value)
+        if os.path.exists(logo_path):
+            has_logo = True
+            
+    if not has_logo:
+        logo_path = os.path.join(base_dir, 'static', 'images', 'logo_watermark.png')
+        has_logo = os.path.exists(logo_path)
 
     def get_transparent_logo(target_width, opacity=0.50):
         if not has_logo: return None
-        img = Image.open(logo_path).convert("RGBA")
-        aspect_ratio = img.height / img.width
-        new_width = int(target_width)
-        new_height = int(new_width * aspect_ratio)
-        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        alpha = img.split()[3]
-        alpha = ImageEnhance.Brightness(alpha).enhance(opacity)
-        img.putalpha(alpha)
-        return img
+        try:
+            img = Image.open(logo_path).convert("RGBA")
+            aspect_ratio = img.height / img.width
+            new_width = int(target_width)
+            new_height = int(new_width * aspect_ratio)
+            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            alpha = img.split()[3]
+            alpha = ImageEnhance.Brightness(alpha).enhance(opacity)
+            img.putalpha(alpha)
+            return img
+        except Exception as e:
+            current_app.logger.error(f"Error loading watermark logo: {e}")
+            return None
 
+    # ==========================================
+    # WATERMARK IMAGES (TILED REPEAT)
+    # ==========================================
     if ext in ['jpg', 'jpeg', 'png']:
         try:
-            base_image = Image.open(file_path).convert("RGBA")
+            base_image = Image.open(full_file_path).convert("RGBA")
             width, height = base_image.size
             watermark_layer = Image.new("RGBA", (width, height), (0,0,0,0))
             
             if has_logo:
                 logo_w = int(width * 0.15)
-                if logo_w < 80: logo_w = 80
-                logo_img = get_transparent_logo(logo_w, opacity=0.50)
+                if logo_w < 80: logo_w = 80 
+                logo_img = get_transparent_logo(logo_w, opacity=0.25) 
                 
                 if logo_img:
                     logo_h = logo_img.height
-                    gap_x = int(logo_w * 0.8)
-                    gap_y = int(logo_h * 0.8)
+                    gap_x, gap_y = int(logo_w * 0.5), int(logo_h * 0.5)
+                    
                     for y in range(0, height, logo_h + gap_y):
                         for x in range(0, width, logo_w + gap_x):
-                            offset_x = int(logo_w / 2) if (y // (logo_h + gap_y)) % 2 == 1 else 0
+                            offset_x = int((logo_w + gap_x) / 2) if (y // (logo_h + gap_y)) % 2 == 1 else 0
                             draw_x = x + offset_x
                             if draw_x < width and y < height:
                                 watermark_layer.paste(logo_img, (draw_x, y), logo_img)
             else:
                 draw = ImageDraw.Draw(watermark_layer)
                 text = "PADRE GARCIA TOURISM"
-                font_size = max(int(width * 0.05), 14)
+                font_size = max(int(width * 0.04), 14)
                 font = get_font(font_size)
                 
-                try:
-                    bbox = draw.textbbox((0,0), text, font=font)
-                    text_w = bbox[2] - bbox[0]
-                    text_h = bbox[3] - bbox[1]
-                except AttributeError:
-                    text_w, text_h = draw.textsize(text, font=font)
+                try: bbox = draw.textbbox((0,0), text, font=font); text_w, text_h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+                except AttributeError: text_w, text_h = draw.textsize(text, font=font)
                 
-                gap_x = int(text_w * 0.6)
-                gap_y = int(text_h * 4.0)
-                
+                gap_x, gap_y = int(text_w * 0.3), int(text_h * 3)
                 for y in range(0, height, text_h + gap_y):
                     for x in range(0, width, text_w + gap_x):
-                        offset_x = int(text_w / 2) if (y // (text_h + gap_y)) % 2 == 1 else 0
+                        offset_x = int((text_w + gap_x) / 2) if (y // (text_h + gap_y)) % 2 == 1 else 0
                         draw_x = x + offset_x
                         if draw_x < width and y < height:
                             draw.text((draw_x, y), text, font=font, fill=(255, 255, 255, 90))
             
             out = Image.alpha_composite(base_image, watermark_layer)
-            
             if ext in ['jpg', 'jpeg']:
                 out = out.convert("RGB")
                 save_format = 'JPEG'
@@ -322,20 +456,31 @@ def download_watermarked(filename):
             img_io = io.BytesIO()
             out.save(img_io, save_format, quality=95)
             img_io.seek(0)
-
-            return send_file(img_io, mimetype=f'image/{save_format.lower()}', as_attachment=True, download_name=new_filename)
+            return send_file(img_io, mimetype=f'image/{save_format.lower()}', as_attachment=dl, download_name=new_download_name)
         except Exception as e:
-            print(f"Image Error: {e}")
-            return send_file(file_path, as_attachment=True, download_name=new_filename)
+            current_app.logger.error(f"Error watermarking image: {e}")
+            return send_file(full_file_path, as_attachment=dl, download_name=new_download_name)
 
+    # ==========================================
+    # WATERMARK PDFs (TILED REPEAT)
+    # ==========================================
     elif ext == 'pdf':
         try:
+            # 1. READ ENTIRE PDF INTO MEMORY TO RELEASE WINDOWS FILE LOCK
+            with open(full_file_path, "rb") as f:
+                original_pdf_stream = io.BytesIO(f.read())
+                
+            # 2. DELETE THE TEMPORARY FILE IMMEDIATELY NOW THAT WE HAVE IT IN MEMORY
+            if temp_pdf_path and os.path.exists(temp_pdf_path):
+                os.remove(temp_pdf_path)
+                temp_pdf_path = None # Mark as handled
+                
             packet = io.BytesIO()
             c = canvas.Canvas(packet, pagesize=letter)
             pg_w, pg_h = letter
 
             if has_logo:
-                logo_pil = get_transparent_logo(150, opacity=0.50)
+                logo_pil = get_transparent_logo(150, opacity=0.15)
                 if logo_pil:
                     img_byte_arr = io.BytesIO()
                     logo_pil.save(img_byte_arr, format='PNG')
@@ -343,28 +488,30 @@ def download_watermarked(filename):
                     rl_logo = ImageReader(img_byte_arr)
                     logo_w = 150
                     logo_h = 150 * (logo_pil.height / logo_pil.width)
+                    
                     gap_x, gap_y = 100, 100
-                    for y in range(0, int(pg_h) + 200, int(logo_h + gap_y)):
-                        for x in range(0, int(pg_w) + 200, int(logo_w + gap_x)):
-                            offset = 50 if (y // (logo_h + gap_y)) % 2 == 1 else 0
-                            c.drawImage(rl_logo, x + offset, y, width=logo_w, height=logo_h, mask='auto')
+                    for y in range(-int(logo_h), int(pg_h) + int(logo_h), int(logo_h + gap_y)):
+                        for x in range(-int(logo_w), int(pg_w) + int(logo_w), int(logo_w + gap_x)):
+                            offset_x = int((logo_w + gap_x) / 2) if (y // (logo_h + gap_y)) % 2 == 1 else 0
+                            c.drawImage(rl_logo, x + offset_x, y, width=logo_w, height=logo_h, mask='auto')
             else:
-                c.setFillColor(Color(0.7, 0.7, 0.7, alpha=0.3))
-                c.setFont("Helvetica-Bold", 45)
+                c.setFillColor(Color(0.5, 0.5, 0.5, alpha=0.15))
+                c.setFont("Helvetica-Bold", 35)
                 text = "PADRE GARCIA TOURISM"
-                c.saveState()
-                c.translate(pg_w/2, pg_h/2)
-                c.rotate(45)
-                c.drawCentredString(0, 0, text)
-                c.drawCentredString(0, 300, text)
-                c.drawCentredString(0, -300, text)
-                c.restoreState()
+                for y in range(0, int(pg_h), 200):
+                    for x in range(0, int(pg_w), 300):
+                        c.saveState()
+                        offset = 150 if (y // 200) % 2 == 1 else 0
+                        c.translate(x + offset, y)
+                        c.rotate(30)
+                        c.drawCentredString(0, 0, text)
+                        c.restoreState()
             
             c.save()
             packet.seek(0)
             
             watermark_pdf = PdfReader(packet)
-            original_pdf = PdfReader(open(file_path, "rb"))
+            original_pdf = PdfReader(original_pdf_stream)
             output = PdfWriter()
             
             for page in original_pdf.pages:
@@ -375,14 +522,37 @@ def download_watermarked(filename):
             output.write(out_stream)
             out_stream.seek(0)
             
-            return send_file(out_stream, mimetype='application/pdf', as_attachment=True, download_name=new_filename)
+            return send_file(out_stream, mimetype='application/pdf', as_attachment=dl, download_name=new_download_name)
+            
         except Exception as e:
-            print(f"PDF Error: {e}")
-            return send_file(file_path, as_attachment=True, download_name=new_filename)
+            current_app.logger.error(f"Error watermarking PDF: {e}")
+            
+            # If an error happens, we still want to give them the unwatermarked file and clean up
+            if temp_pdf_path and os.path.exists(temp_pdf_path):
+                # Read unwatermarked into memory, delete disk file, then send memory stream
+                with open(temp_pdf_path, "rb") as f:
+                    fallback_stream = io.BytesIO(f.read())
+                os.remove(temp_pdf_path)
+                return send_file(fallback_stream, mimetype='application/pdf', as_attachment=dl, download_name=new_download_name)
+                
+            return send_file(full_file_path, as_attachment=dl, download_name=new_download_name)
 
+    # ==========================================
+    # SERVE OTHER FILES (.xls, .ppt, failed docs) NORMALLY
+    # ==========================================
     else:
-        return send_file(file_path, as_attachment=True, download_name=new_filename)
-
+        mimetype_map = {
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls': 'application/vnd.ms-excel',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'ppt': 'application/vnd.ms-powerpoint',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'zip': 'application/zip',
+        }
+        detected_mimetype = mimetype_map.get(ext, 'application/octet-stream')
+        return send_file(full_file_path, mimetype=detected_mimetype, as_attachment=dl, download_name=new_download_name)
+    
 @views.route("/manage-users", methods=["GET", "POST"])
 @login_required
 def manage_users():
@@ -468,8 +638,14 @@ def manage_users():
 @views.route("/history")
 def history():
     content = get_common_content()
-    mayors = Mayor.query.all()
+    mayors = Mayor.query.order_by(Mayor.id).all()
     barangays = Barangay.query.order_by(Barangay.name).all() 
+    
+    # Fetch media specifically for the Padre Garcia section
+    pg_media = HistoryMedia.query.filter_by(section_key='padre_garcia').order_by(HistoryMedia.order).all()
+
+    # --- NEW: Fetch media for the 'Extra Information Section' ---
+    extra_info_media = HistoryMedia.query.filter_by(section_key='history_extra_info').order_by(HistoryMedia.order).all()
 
     biography_text = """An eminent Filipino Batangueño Priest – Hero, Padre Vicente Teodoro Garcia was named after St. Vincent Ferrer by his beloved parents Don Jose Garcia and Doña Andrea Teodora of barrio Maugat, then Old Rosario (1687) now this Municipality of Padre V. Garcia (1949), Province of Batangas, Philippines.
 
@@ -488,7 +664,7 @@ HIS WRITINGS AND AUTHORSHIP:
 He authored numerous works including "Oracion Funebre" (1861), "Vida de San Eustaquio" (1875), "Aves de los Almas" (1875), "Pagtulad kay Kristo" (1880), "Pagsisiyam sa Mahal na Birhen" (1881), and "Casaysayan ng mga Cababalaghan" (1881).
 
 HIS DEFENSE OF RIZAL:
-Most notably, he wrote the Brave Defense Counter Attack Letter defending "Noli Me Tangere" (Touch Me Not) or "Huwag mo Akong Salangin" published in La Solidaridad, Vol. 11, 79-80 under the pen name V. Caraig (1895).
+Most notably, he wrote the Brave Defense Counter Attack Letter defending "Noli Me Tangere" (Touch Me Not) or "Huwag mo Akong Salangin" published in La Solidaridad, Vol.11, 79-80 under the pen name V. Caraig (1895).
 
 LEGACY:
 On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring April 5 of every year as Padre Vicente Garcia Day to commemorate the birthdate of Padre Vicente T. Garcia."""
@@ -498,10 +674,10 @@ On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring 
         'hist_hero_img': url_for('static', filename='images/municipal.jpg'),
         'hist_org_title': 'Our Origins', 'hist_org_text': 'Originally known as Lumang Bayan...',
         'hist_build_title': 'Transformation Of Municipal Buildings', 'hist_build_sub': 'Witnessing the structural evolution...',
-        'hist_b1_img': url_for('static', filename='images/firstm.jpg.jpg'), 'hist_b1_lbl': 'First Municipal Hall',
-        'hist_b2_img': url_for('static', filename='images/firstmm.jpg.jpg'), 'hist_b2_lbl': 'After the Fire',
-        'hist_b3_img': url_for('static', filename='images/first.jpg.jpg'), 'hist_b3_lbl': 'First Renovation',
-        'hist_b4_img': url_for('static', filename='images/municipal.jpg'), 'hist_b4_lbl': 'Modern Structure',
+        'hist_b1_img': url_for('static', filename='images/firstm.jpg.jpg'), 'hist_b1_lbl': 'First Municipal Hall', 'hist_b1_desc': 'The original municipal hall of Padre Garcia.',
+        'hist_b2_img': url_for('static', filename='images/firstmm.jpg.jpg'), 'hist_b2_lbl': 'After the Fire', 'hist_b2_desc': 'The rebuilt structure following the tragic fire.',
+        'hist_b3_img': url_for('static', filename='images/first.jpg.jpg'), 'hist_b3_lbl': 'First Renovation', 'hist_b3_desc': 'The first major architectural renovation of the hall.',
+        'hist_b4_img': url_for('static', filename='images/municipal.jpg'), 'hist_b4_lbl': 'Modern Structure', 'hist_b4_desc': 'The contemporary and modern municipal building standing today.',
         
         'hist_pg_title': 'Padre Vicente Teodoro Garcia', 
         'hist_pg_sub': 'April 05, 1817 – July 12, 1899',
@@ -513,10 +689,21 @@ On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring 
 
         'hist_mayor_title': "Mayor's Generation", 'hist_mayor_sub': "Leaders who shaped our history",
         'hist_brgy_title': 'The 18 Barangays', 'hist_brgy_sub': 'Click on a barangay to view details',
+
+        # --- NEW EXTRA INFO DEFAULTS ---
+        'hist_extra_title': 'A Legacy of Strength',
+        'hist_extra_sub': 'Cultural Resilience',
+        'hist_extra_desc': 'Padre Garcia has weathered many storms and emerged stronger, a testament to the enduring spirit of its people. From colonial struggles to modern challenges, the municipality has always found its way to progress while preserving its unique identity.',
+        # 'hist_extra_img': url_for('static', filename='images/municipal.jpg') # REMOVED: Now handled by HistoryMedia
     }
     for k, v in defaults.items(): content[k] = get_content(k, v)
     
-    return render_template("history.html", content=content, mayors=mayors, barangays=barangays)
+    return render_template("history.html", 
+                           content=content, 
+                           mayors=mayors, 
+                           barangays=barangays, 
+                           pg_media=pg_media,
+                           extra_info_media=extra_info_media)
 
 @views.route("/commercial")
 def commercial():
@@ -569,20 +756,65 @@ def attractions():
     
     return render_template("attractions.html", content=content, attractions=attractions_list)
 
+@views.route('/api/attraction/<int:id>/media')
+@login_required
+def get_attraction_media(id):
+    if not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    attraction = MajorAttraction.query.get_or_404(id)
+    media_list = [
+        {
+            'id': item.id,
+            'url': item.media_url,
+            'type': item.media_type,
+            'caption': item.caption
+        } 
+        for item in attraction.media_items
+    ]
+    return jsonify({'media': media_list})
+
+@views.route("/attraction/<int:id>")
+def attraction_detail(id):
+    attraction = MajorAttraction.query.get_or_404(id)
+    content = get_common_content()
+    return render_template("attraction_detail.html", attraction=attraction, content=content)
+
 @views.route("/culture")
 def culture():
     content = get_common_content()
     defaults = {
-        'cult_hero_title': 'Cultural Inventory', 'cult_hero_sub': 'The sacred sites...', 'cult_hero_tag': 'Preserving Heritage', 'cult_hero_bg': url_for('static', filename='images/municipal.jpg'),
-        'cult_church_title': 'Most Holy Rosary Parish', 'cult_old_img': url_for('static', filename='images/church_old.jpg'), 'cult_old_lbl': 'The Old Church', 'cult_new_img': url_for('static', filename='images/church_new.jpg'), 'cult_new_lbl': 'The Modern Structure',
-        'cult_hist_title': 'Historical Significance', 'cult_hist_text': 'The Parish stands as...', 'cult_arch_title': 'Architecture', 'cult_arch_text': 'Exterior details...',
-        'cult_patron_img': url_for('static', filename='images/mama_mary.jpg'), 'cult_patron_title': 'Our Lady of the Most Holy Rosary', 'cult_patron_sub': '"The beloved patroness..."', 'cult_patron_text': 'The image...',
-        'cult_mon_title': 'Historical Monuments', 'cult_mon_sub': 'Honoring Pillars',
-        'cult_m1_name': 'Padre Vicente Garcia', 'cult_m1_desc': 'A Filipino priest...', 'cult_m1_img': url_for('static', filename='images/monument_vicente.jpg'),
-        'cult_m2_name': 'Hon. Graciano R. Recto', 'cult_m2_desc': 'First Mayor...', 'cult_m2_img': url_for('static', filename='images/monument_recto.jpg'),
-        'cult_m3_name': 'Father Antonio', 'cult_m3_desc': 'Religious figure...', 'cult_m3_img': url_for('static', filename='images/monument_antonio.jpg')
+        'cult_hero_title': 'Cultural Inventory', 
+        'cult_hero_sub': 'The sacred sites...', 
+        'cult_hero_tag': 'Preserving Heritage', 
+        'cult_hero_bg': url_for('static', filename='images/municipal.jpg'),
+        'cult_church_title': 'Most Holy Rosary Parish', 
+        'cult_old_img': url_for('static', filename='images/church_old.jpg'), 
+        'cult_old_lbl': 'The Old Church', 
+        'cult_new_img': url_for('static', filename='images/church_new.jpg'), 
+        'cult_new_lbl': 'The Modern Structure',
+        'cult_hist_title': 'Historical Significance', 
+        'cult_hist_text': 'The Parish stands as...', 
+        'cult_arch_title': 'Architecture', 
+        'cult_arch_text': 'Exterior details...',
+        'cult_patron_img': url_for('static', filename='images/mama_mary.jpg'), 
+        'cult_patron_title': 'Our Lady of the Most Holy Rosary', 
+        'cult_patron_sub': '"The beloved patroness..."', 
+        'cult_patron_text': 'The image...',
+        'cult_mon_title': 'Historical Monuments', 
+        'cult_mon_sub': 'Honoring Pillars',
+        'cult_m1_name': 'Padre Vicente Garcia', 'cult_m1_desc': '...', 'cult_m1_img': '...', 
+        'cult_m1_pos': '50', # <--- ADD THIS (Default to Center)
+        'cult_m2_name': 'Hon. Graciano R. Recto', 'cult_m2_desc': '...', 'cult_m2_img': '...', 
+        'cult_m2_pos': '50', # <--- ADD THIS
+        'cult_m3_name': 'Father Antonio', 'cult_m3_desc': '...', 'cult_m3_img': '...', 
+        'cult_m3_pos': '50'  # <--- ADD THIS
     }
-    for k, v in defaults.items(): content[k] = get_content(k, v)
+    
+    # This loop actually fetches the saved values from the database
+    for k, v in defaults.items(): 
+        content[k] = get_content(k, v)
+        
     return render_template("culture.html", content=content)
 
 @views.route("/festival")
@@ -630,7 +862,8 @@ def food():
 @views.route("/ordinances")
 def ordinances():
     content = get_common_content()
-    ordinances_list = Ordinance.query.order_by(Ordinance.id.desc()).all()
+    ordinances_list = Ordinance.query.all()
+    ordinances_list = sorted(ordinances_list, key=get_ord_sort_key)
     return render_template("ordinances.html", content=content, ordinances=ordinances_list)
 
 @views.route("/contacts", methods=["GET", "POST"])
@@ -852,23 +1085,69 @@ def manage_ordinances():
             num = request.form.get("ord_number")
             title = request.form.get("ord_title")
             desc = request.form.get("ord_desc")
-            file = request.files.get("ord_file")
-            final_path = None
-            if file and file.filename != '': final_path = save_file(file)
+            files = request.files.getlist("ord_file")
+            
+            paths = []
+            for f in files:
+                if f and f.filename != '':
+                    path = save_file(f)
+                    if path: paths.append(path)
+                    
+            file_url = "|".join(paths) if paths else None
+            
             if num and title:
-                db.session.add(Ordinance(number=num, title=title, description=desc, file_url=final_path))
+                db.session.add(Ordinance(number=num, title=title, description=desc, file_url=file_url))
                 flash("Ordinance added successfully!", "success")
             else:
                 flash("Number and Title are required.", "error")
+                
+        elif "edit_ordinance" in request.form:
+            ord_id = request.form.get("ord_id")
+            ordinance = Ordinance.query.get(ord_id)
+            if ordinance:
+                ordinance.number = request.form.get("ord_number")
+                ordinance.title = request.form.get("ord_title")
+                ordinance.description = request.form.get("ord_desc")
+                
+                files = request.files.getlist("ord_file")
+                new_paths = []
+                for f in files:
+                    if f and f.filename != '':
+                        path = save_file(f)
+                        if path: new_paths.append(path)
+                        
+                if new_paths:
+                    existing = ordinance.file_url.split('|') if ordinance.file_url else []
+                    existing.extend(new_paths)
+                    ordinance.file_url = "|".join(existing)
+                    
+                db.session.commit()
+                flash("Ordinance updated successfully!", "success")
+                
+        elif "delete_ord_file" in request.form:
+            ord_id = request.form.get("ord_id")
+            file_path = request.form.get("file_path")
+            ordinance = Ordinance.query.get(ord_id)
+            if ordinance and ordinance.file_url:
+                paths = ordinance.file_url.split('|')
+                if file_path in paths:
+                    paths.remove(file_path)
+                    ordinance.file_url = "|".join(paths) if paths else None
+                    db.session.commit()
+                    flash("File removed.", "success")
+                    
         elif "delete_ordinance" in request.form:
             ord_id = request.form.get("ord_id")
             ordinance = Ordinance.query.get(ord_id)
             if ordinance:
                 db.session.delete(ordinance)
                 flash("Ordinance deleted.", "success")
+                
         db.session.commit()
         return redirect(url_for("views.manage_ordinances"))
-    ordinances = Ordinance.query.order_by(Ordinance.id.desc()).all()
+        
+    ordinances = Ordinance.query.all()
+    ordinances = sorted(ordinances, key=get_ord_sort_key)
     return render_template("manage_ordinances.html", ordinances=ordinances)
 
 @views.before_app_request
@@ -1118,6 +1397,10 @@ def edit_about():
     }
     return render_template("about_us_edit.html", content=content)
 
+# ==========================================
+#               ADMIN ROUTES
+# ==========================================
+
 @views.route("/edit-history", methods=["GET", "POST"])
 @login_required
 def edit_history():
@@ -1140,164 +1423,173 @@ HIS WRITINGS AND AUTHORSHIP:
 He authored numerous works including "Oracion Funebre" (1861), "Vida de San Eustaquio" (1875), "Aves de los Almas" (1875), "Pagtulad kay Kristo" (1880), "Pagsisiyam sa Mahal na Birhen" (1881), and "Casaysayan ng mga Cababalaghan" (1881).
 
 HIS DEFENSE OF RIZAL:
-Most notably, he wrote the Brave Defense Counter Attack Letter defending "Noli Me Tangere" (Touch Me Not) or "Huwag mo Akong Salangin" published in La Solidaridad, Vol. 11, 79-80 under the pen name V. Caraig (1895).
+Most notably, he wrote the Brave Defense Counter Attack Letter defending "Noli Me Tangere" (Touch Me Not) or "Huwag mo Akong Salangin" published in La Solidaridad, Vol.11, 79-80 under the pen name V. Caraig (1895).
 
 LEGACY:
 On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring April 5 of every year as Padre Vicente Garcia Day to commemorate the birthdate of Padre Vicente T. Garcia."""
 
     if request.method == "POST":
-        
+        # --- Handle Mayor Forms ---
         if "add_mayor" in request.form:
             name = request.form.get("mayor_name")
             role = request.form.get("mayor_role")
             years = request.form.get("mayor_years")
+            description = request.form.get("mayor_desc")
             file = request.files.get("mayor_img")
-            
-            final_path = None
-            if file and file.filename != '': final_path = save_file(file)
-            if not final_path: final_path = url_for('static', filename='images/placeholder_mayor.jpg')
-
+            final_path = save_file(file) if file and file.filename != '' else url_for('static', filename='images/placeholder_mayor.jpg')
             if name:
-                db.session.add(Mayor(name=name, role=role, years=years, image_url=final_path))
+                db.session.add(Mayor(name=name, role=role, years=years, description=description, image_url=final_path))
                 db.session.commit()
                 flash("New Mayor added!", "success")
             return redirect(url_for("views.edit_history"))
 
         if "edit_mayor" in request.form:
-            mayor_id = request.form.get("mayor_id")
-            mayor = Mayor.query.get(mayor_id)
-            if mayor:
-                mayor.name = request.form.get("mayor_name")
-                mayor.role = request.form.get("mayor_role")
-                mayor.years = request.form.get("mayor_years")
-                
-                file = request.files.get("mayor_img")
-                if file and file.filename != '':
-                    mayor.image_url = save_file(file)
-                
-                db.session.commit()
-                flash("Mayor details updated!", "success")
+            mayor = Mayor.query.get_or_404(request.form.get("mayor_id"))
+            mayor.name = request.form.get("mayor_name")
+            mayor.role = request.form.get("mayor_role")
+            mayor.years = request.form.get("mayor_years")
+            mayor.description = request.form.get("mayor_desc")
+            file = request.files.get("mayor_img")
+            if file and file.filename != '':
+                mayor.image_url = save_file(file)
+            db.session.commit()
+            flash("Mayor details updated!", "success")
             return redirect(url_for("views.edit_history"))
 
         if "delete_mayor" in request.form:
-            mayor = Mayor.query.get(request.form.get("mayor_id"))
-            if mayor:
-                db.session.delete(mayor)
-                db.session.commit()
-                flash("Mayor deleted.", "success")
+            mayor = Mayor.query.get_or_404(request.form.get("mayor_id"))
+            db.session.delete(mayor)
+            db.session.commit()
+            flash("Mayor deleted.", "success")
             return redirect(url_for("views.edit_history"))
 
+        # --- Handle Barangay Forms ---
         if "add_barangay" in request.form:
             name = request.form.get("brgy_name")
-            captain = request.form.get("brgy_captain")
-            map_url = request.form.get("brgy_map")
-            file = request.files.get("brgy_img")
-
-            existing = Barangay.query.filter_by(name=name).first()
-            if existing:
-                flash(f"Barangay {name} already exists.", "error")
-            else:
-                img_path = None
-                if file and file.filename != '': img_path = save_file(file)
-                
-                new_brgy = Barangay(name=name, captain_name=captain, map_url=map_url, captain_image=img_path)
-                db.session.add(new_brgy)
-                db.session.commit()
-                flash(f"Added {name}!", "success")
+            new_brgy = Barangay(
+                name=name,
+                captain_name=request.form.get("brgy_captain"),
+                map_url=request.form.get("brgy_map"),
+                captain_image=save_file(request.files.get("brgy_img")) if request.files.get("brgy_img") else None
+            )
+            db.session.add(new_brgy)
+            db.session.commit()
+            flash(f"Added {name}!", "success")
             return redirect(url_for("views.edit_history"))
 
         if "edit_barangay" in request.form:
-            brgy_id = request.form.get("brgy_id")
-            brgy = Barangay.query.get(brgy_id)
-            if brgy:
-                brgy.name = request.form.get("brgy_name")
-                brgy.captain_name = request.form.get("brgy_captain")
-                brgy.map_url = request.form.get("brgy_map")
-                
-                file = request.files.get("brgy_img")
-                if file and file.filename != '':
-                    brgy.captain_image = save_file(file)
-                
-                db.session.commit()
-                flash(f"Updated {brgy.name}!", "success")
+            brgy = Barangay.query.get_or_404(request.form.get("brgy_id"))
+            brgy.name = request.form.get("brgy_name")
+            brgy.captain_name = request.form.get("brgy_captain")
+            brgy.map_url = request.form.get("brgy_map")
+            file = request.files.get("brgy_img")
+            if file and file.filename != '':
+                brgy.captain_image = save_file(file)
+            db.session.commit()
+            flash(f"Updated {brgy.name}!", "success")
             return redirect(url_for("views.edit_history"))
 
         if "delete_barangay" in request.form:
-            brgy = Barangay.query.get(request.form.get("brgy_id"))
-            if brgy:
-                db.session.delete(brgy)
-                db.session.commit()
-                flash("Barangay deleted.", "success")
+            brgy = Barangay.query.get_or_404(request.form.get("brgy_id"))
+            db.session.delete(brgy)
+            db.session.commit()
+            flash("Barangay deleted.", "success")
+            return redirect(url_for("views.edit_history"))
+        
+        # --- Handle History Media Upload (Gallery) ---
+        if "add_history_media" in request.form:
+            files = request.files.getlist("media_files")
+            caption = request.form.get("media_caption")
+            section_key = request.form.get("section_key") 
+            for file in files:
+                if file and file.filename != '':
+                    path = save_file(file)
+                    ext = file.filename.split('.')[-1].lower()
+                    media_type = 'video' if ext in ['mp4', 'mov', 'webm'] else 'image'
+                    new_media = HistoryMedia(section_key=section_key, media_url=path, media_type=media_type, caption=caption)
+                    db.session.add(new_media)
+            db.session.commit()
+            flash(f"Added new media item(s).", "success")
             return redirect(url_for("views.edit_history"))
 
-        pdf_file = request.files.get("hist_pg_pdf")
-        if pdf_file and pdf_file.filename != '':
-            path = save_file(pdf_file)
-            existing = SiteContent.query.filter_by(key='hist_pg_file').first()
-            if existing: existing.value = path
-            else: db.session.add(SiteContent(key='hist_pg_file', value=path))
+        if "update_history_media_caption" in request.form:
+            media_item = HistoryMedia.query.get_or_404(request.form.get("media_id"))
+            media_item.caption = request.form.get("media_caption")
+            db.session.commit()
+            flash("Image description updated!", "success")
+            return redirect(url_for("views.edit_history"))
 
-        fields = [
-            'hist_hero_title', 'hist_hero_sub',
-            'hist_org_title', 'hist_org_text',
-            'hist_build_title', 'hist_build_sub',
-            'hist_b1_lbl', 'hist_b2_lbl', 'hist_b3_lbl', 'hist_b4_lbl',
-            'hist_pg_title', 'hist_pg_sub', 'hist_pg_sect_title', 'hist_pg_text', 'hist_pg_wiki',
-            'hist_mayor_title', 'hist_mayor_sub',
-            'hist_brgy_title', 'hist_brgy_sub'
-        ]
-        for field in fields:
-            val = request.form.get(field)
-            if val is not None:
-                existing = SiteContent.query.filter_by(key=field).first()
-                if existing: existing.value = val
-                else: db.session.add(SiteContent(key=field, value=val))
+        if "delete_history_media" in request.form:
+            media_item = HistoryMedia.query.get_or_404(request.form.get("media_id"))
+            db.session.delete(media_item)
+            db.session.commit()
+            flash("Media item deleted.", "success")
+            return redirect(url_for("views.edit_history"))
 
-        img_fields = [
-            'hist_hero_img', 
-            'hist_pg_img', 
-            'hist_b1_img', 'hist_b2_img', 'hist_b3_img', 'hist_b4_img'
-        ]
-        for field in img_fields:
-            file = request.files.get(field + "_file")
-            if file and file.filename != '':
-                path = save_file(file)
-                existing = SiteContent.query.filter_by(key=field).first()
+        # --- Handle Main Static Content (Save All Changes Button) ---
+        if "update_main_content" in request.form:
+            pdf_file = request.files.get("hist_pg_pdf")
+            if pdf_file and pdf_file.filename != '':
+                path = save_file(pdf_file)
+                existing = SiteContent.query.filter_by(key='hist_pg_file').first()
                 if existing: existing.value = path
-                else: db.session.add(SiteContent(key=field, value=path))
+                else: db.session.add(SiteContent(key='hist_pg_file', value=path))
 
-        db.session.commit()
-        flash("History Page updated!", "success")
-        return redirect(url_for("views.edit_history"))
+            fields = [
+                'hist_hero_title', 'hist_hero_sub', 'hist_org_title', 'hist_org_text',
+                'hist_build_title', 'hist_build_sub', 'hist_b1_lbl', 'hist_b2_lbl', 'hist_b3_lbl', 'hist_b4_lbl',
+                'hist_b1_desc', 'hist_b2_desc', 'hist_b3_desc', 'hist_b4_desc',
+                'hist_pg_title', 'hist_pg_sub', 'hist_pg_sect_title', 'hist_pg_text', 'hist_pg_wiki',
+                'hist_mayor_title', 'hist_mayor_sub', 'hist_brgy_title', 'hist_brgy_sub',
+                'hist_extra_title', 'hist_extra_sub', 'hist_extra_desc'
+            ]
+            for field in fields:
+                val = request.form.get(field)
+                if val is not None:
+                    existing = SiteContent.query.filter_by(key=field).first()
+                    if existing: existing.value = val
+                    else: db.session.add(SiteContent(key=field, value=val))
 
+            img_fields = ['hist_hero_img', 'hist_pg_img', 'hist_b1_img', 'hist_b2_img', 'hist_b3_img', 'hist_b4_img']
+            for field in img_fields:
+                file = request.files.get(field + "_file")
+                if file and file.filename != '':
+                    path = save_file(file)
+                    existing = SiteContent.query.filter_by(key=field).first()
+                    if existing: existing.value = path
+                    else: db.session.add(SiteContent(key=field, value=path))
+
+            db.session.commit()
+            flash("History Page updated successfully!", "success")
+            return redirect(url_for("views.edit_history"))
+
+    # GET Request
     mayors_list = Mayor.query.order_by(Mayor.id).all()
     barangays_list = Barangay.query.order_by(Barangay.name).all()
+    pg_media = HistoryMedia.query.filter_by(section_key='padre_garcia').order_by(HistoryMedia.id.desc()).all()
+    extra_info_media = HistoryMedia.query.filter_by(section_key='history_extra_info').order_by(HistoryMedia.id.desc()).all()
 
     defaults = {
         'hist_hero_title': 'History & Heritage', 'hist_hero_sub': 'From Lumang Bayan to Today',
         'hist_hero_img': url_for('static', filename='images/municipal.jpg'),
         'hist_org_title': 'Our Origins', 'hist_org_text': 'Originally known as Lumang Bayan...',
         'hist_build_title': 'Transformation Of Municipal Buildings', 'hist_build_sub': 'Witnessing the structural evolution...',
-        'hist_b1_img': url_for('static', filename='images/firstm.jpg.jpg'), 'hist_b1_lbl': 'First Municipal Hall',
-        'hist_b2_img': url_for('static', filename='images/firstmm.jpg.jpg'), 'hist_b2_lbl': 'After the Fire',
-        'hist_b3_img': url_for('static', filename='images/first.jpg.jpg'), 'hist_b3_lbl': 'First Renovation',
-        'hist_b4_img': url_for('static', filename='images/municipal.jpg'), 'hist_b4_lbl': 'Modern Structure',
-        
-        'hist_pg_title': 'Padre Vicente Teodoro Garcia', 
-        'hist_pg_sub': 'April 05, 1817 – July 12, 1899',
-        'hist_pg_sect_title': 'Life & Works', 
-        'hist_pg_text': biography_text, 
-        'hist_pg_img': url_for('static', filename='images/pgv.jpg.jpg'),
-        'hist_pg_wiki': 'https://en.wikipedia.org/wiki/Vicente_Garc%C3%ADa',
-        'hist_pg_file': '', 
-
-        'hist_mayor_title': "Mayor's Generation", 'hist_mayor_sub': "Leaders who shaped our history",
+        'hist_b1_img': url_for('static', filename='images/firstm.jpg.jpg'), 'hist_b1_lbl': 'First Municipal Hall', 'hist_b1_desc': 'The original municipal hall of Padre Garcia.',
+        'hist_b2_img': url_for('static', filename='images/firstmm.jpg.jpg'), 'hist_b2_lbl': 'After the Fire', 'hist_b2_desc': 'The rebuilt structure following the tragic fire.',
+        'hist_b3_img': url_for('static', filename='images/first.jpg.jpg'), 'hist_b3_lbl': 'First Renovation', 'hist_b3_desc': 'The first major architectural renovation of the hall.',
+        'hist_b4_img': url_for('static', filename='images/municipal.jpg'), 'hist_b4_lbl': 'Modern Structure', 'hist_b4_desc': 'The contemporary and modern municipal building standing today.',
+        'hist_pg_title': 'Padre Vicente Teodoro Garcia', 'hist_pg_sub': 'April 05, 1817 – July 12, 1899',
+        'hist_pg_sect_title': 'Life & Works', 'hist_pg_text': biography_text, 
+        'hist_pg_img': url_for('static', filename='images/pgv.jpg.jpg'), 'hist_pg_wiki': 'https://en.wikipedia.org/wiki/Vicente_Garc%C3%ADa',
+        'hist_pg_file': '', 'hist_mayor_title': "Mayor's Generation", 'hist_mayor_sub': "Leaders who shaped our history",
         'hist_brgy_title': 'The 18 Barangays', 'hist_brgy_sub': 'Click on a barangay to view details',
+        'hist_extra_title': 'A Legacy of Strength', 'hist_extra_sub': 'Cultural Resilience', 'hist_extra_desc': 'Padre Garcia has weathered many storms...',
     }
+    
     content = {}
     for k, v in defaults.items(): content[k] = get_content(k, v)
     
-    return render_template("edit_history.html", content=content, mayors=mayors_list, barangays=barangays_list)
+    return render_template("edit_history.html", content=content, mayors=mayors_list, barangays=barangays_list, pg_media=pg_media, extra_info_media=extra_info_media)
 
 @views.route("/edit-commerce", methods=["GET", "POST"])
 @login_required
@@ -1430,14 +1722,15 @@ def edit_attractions():
     
     if request.method == "POST":
         
+        # --- Handle Main Attraction Edits ---
         if "add_attr" in request.form:
-            name = request.form.get("attr_name")
             new_attr = MajorAttraction(
-                name=name, 
+                name=request.form.get("attr_name"), 
                 tag=request.form.get("attr_tag"),
                 description=request.form.get("attr_desc"), 
                 location=request.form.get("attr_loc"),
                 map_url=request.form.get("attr_map"), 
+                full_content=request.form.get("attr_full_content"),
                 media_url=save_file(request.files.get("attr_media")) if request.files.get("attr_media") else None
             )
             db.session.add(new_attr)
@@ -1446,47 +1739,119 @@ def edit_attractions():
             return redirect(url_for("views.edit_attractions"))
 
         if "edit_attr" in request.form:
-            attr = MajorAttraction.query.get(request.form.get("attr_id"))
-            if attr:
-                attr.name = request.form.get("attr_name")
-                attr.tag = request.form.get("attr_tag")
-                attr.description = request.form.get("attr_desc")
-                attr.location = request.form.get("attr_loc")
-                attr.map_url = request.form.get("attr_map")
-                
-                file = request.files.get("attr_media")
-                if file and file.filename != '': 
-                    attr.media_url = save_file(file)
-                db.session.commit()
-                flash("Attraction updated!", "success")
+            attr = MajorAttraction.query.get_or_404(request.form.get("attr_id"))
+            attr.name = request.form.get("attr_name")
+            attr.tag = request.form.get("attr_tag")
+            attr.description = request.form.get("attr_desc")
+            attr.location = request.form.get("attr_loc")
+            attr.map_url = request.form.get("attr_map")
+            attr.full_content = request.form.get("attr_full_content")
+            
+            file = request.files.get("attr_media")
+            if file and file.filename != '': 
+                attr.media_url = save_file(file)
+            db.session.commit()
+            flash("Attraction details updated!", "success")
             return redirect(url_for("views.edit_attractions"))
 
         if "delete_attr" in request.form:
-            attr = MajorAttraction.query.get(request.form.get("attr_id"))
-            if attr:
-                db.session.delete(attr)
-                db.session.commit()
+            attr = MajorAttraction.query.get_or_404(request.form.get("attr_id"))
+            db.session.delete(attr)
+            db.session.commit()
+            flash("Attraction deleted.", "success")
             return redirect(url_for("views.edit_attractions"))
 
+        # --- Handle Gallery Media Upload (Images/Videos) ---
+        if "add_gallery_media" in request.form:
+            attraction_id = request.form.get("attraction_id")
+            attraction = MajorAttraction.query.get_or_404(attraction_id)
+            files = request.files.getlist("gallery_files")
+            caption = request.form.get("media_caption")
+
+            for file in files:
+                if file and file.filename != '':
+                    path = save_file(file)
+                    ext = file.filename.split('.')[-1].lower()
+                    media_type = 'video' if ext in ['mp4', 'mov', 'webm'] else 'image'
+
+                    new_media = AttractionMedia(
+                        attraction_id=attraction_id,
+                        media_url=path,
+                        media_type=media_type,
+                        caption=caption
+                    )
+                    db.session.add(new_media)
+            db.session.commit()
+            flash(f"Added new gallery media to {attraction.name}.", "success")
+            return redirect(url_for("views.edit_attractions"))
+        
+        # --- Handle Downloadable Files Upload (PDFs, Docs, etc.) ---
+        if "add_download_file" in request.form:
+            attraction_id = request.form.get("attraction_id")
+            attraction = MajorAttraction.query.get_or_404(attraction_id)
+            files = request.files.getlist("download_files")
+            caption = request.form.get("file_caption")
+
+            for file in files:
+                if file and file.filename != '':
+                    path = save_file(file)
+                    
+                    new_media = AttractionMedia(
+                        attraction_id=attraction_id,
+                        media_url=path,
+                        media_type='file',
+                        caption=caption
+                    )
+                    db.session.add(new_media)
+            db.session.commit()
+            flash(f"Added downloadable file(s) to {attraction.name}.", "success")
+            return redirect(url_for("views.edit_attractions"))
+        
+        # --- Handle Media Deletion (For both visual media and files) ---
+        if "delete_media" in request.form:
+            media_id = request.form.get("media_id")
+            media_item = AttractionMedia.query.get_or_404(media_id)
+            
+            # Optional: Delete the actual file from the server
+            try:
+                if media_item.media_url:
+                    file_path = os.path.join(current_app.root_path, media_item.media_url)
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+            except Exception as e:
+                current_app.logger.error(f"Error deleting file {media_item.media_url}: {e}")
+
+            db.session.delete(media_item)
+            db.session.commit()
+            flash("Media/File item deleted.", "success")
+            return redirect(url_for("views.edit_attractions"))
+
+        # --- Static Content Handler ---
         fields = ['attr_hero_title', 'attr_hero_sub', 'attr_hero_desc']
         for field in fields:
             val = request.form.get(field)
             if val is not None:
                 existing = SiteContent.query.filter_by(key=field).first()
-                if existing: existing.value = val
-                else: db.session.add(SiteContent(key=field, value=val))
+                if existing: 
+                    existing.value = val
+                else: 
+                    db.session.add(SiteContent(key=field, value=val))
                 
+        # Handle file upload for static content
         file = request.files.get("attr_hero_bg_file")
         if file and file.filename != '':
             path = save_file(file)
-            existing = SiteContent.query.filter_by(key='attr_hero_bg').first()
-            if existing: existing.value = path
-            else: db.session.add(SiteContent(key='attr_hero_bg', value=path))
+            existing = SiteContent.query.filter_by(key="attr_hero_bg").first()
+            if existing: 
+                existing.value = path
+            else: 
+                db.session.add(SiteContent(key="attr_hero_bg", value=path))
                 
         db.session.commit()
         flash("Attractions Page static content updated!", "success")
         return redirect(url_for("views.edit_attractions"))
 
+    # --- GET Request Logic ---
     defaults = {
         'attr_hero_title': 'Major Attractions', 
         'attr_hero_sub': 'Pride of the Town', 
@@ -1500,28 +1865,36 @@ def edit_attractions():
     
     return render_template("edit_attractions.html", content=content, attractions=attractions_list)
 
-
 @views.route("/edit-culture", methods=["GET", "POST"])
 @login_required
 def edit_culture():
-    if not current_user.is_admin: return redirect(url_for("views.home"))
+    if not current_user.is_admin: 
+        return redirect(url_for("views.home"))
+
     if request.method == "POST":
+        # 1. List ALL text-based fields including the NEW repositioning (pos) fields
         fields = [
             'cult_hero_title', 'cult_hero_sub', 'cult_hero_tag',
             'cult_church_title', 'cult_old_lbl', 'cult_new_lbl',
             'cult_hist_title', 'cult_hist_text', 'cult_arch_title', 'cult_arch_text',
             'cult_patron_title', 'cult_patron_sub', 'cult_patron_text',
             'cult_mon_title', 'cult_mon_sub',
-            'cult_m1_name', 'cult_m1_desc',
-            'cult_m2_name', 'cult_m2_desc',
-            'cult_m3_name', 'cult_m3_desc'
+            'cult_m1_name', 'cult_m1_desc', 'cult_m1_pos', # Added pos
+            'cult_m2_name', 'cult_m2_desc', 'cult_m2_pos', # Added pos
+            'cult_m3_name', 'cult_m3_desc', 'cult_m3_pos'  # Added pos
         ]
+
+        # 2. Loop through and save each field to the SiteContent table
         for field in fields:
             val = request.form.get(field)
             if val is not None:
                 existing = SiteContent.query.filter_by(key=field).first()
-                if existing: existing.value = val
-                else: db.session.add(SiteContent(key=field, value=val))
+                if existing: 
+                    existing.value = val
+                else: 
+                    db.session.add(SiteContent(key=field, value=val))
+
+        # 3. Handle Image Uploads
         img_fields = [
             'cult_hero_bg', 'cult_old_img', 'cult_new_img', 'cult_patron_img',
             'cult_m1_img', 'cult_m2_img', 'cult_m3_img'
@@ -1531,23 +1904,45 @@ def edit_culture():
             if file and file.filename != '':
                 path = save_file(file)
                 existing = SiteContent.query.filter_by(key=field).first()
-                if existing: existing.value = path
-                else: db.session.add(SiteContent(key=field, value=path))
+                if existing: 
+                    existing.value = path
+                else: 
+                    db.session.add(SiteContent(key=field, value=path))
+
         db.session.commit()
-        flash("Culture Page updated!", "success")
+        flash("Culture Page updated successfully!", "success")
         return redirect(url_for("views.edit_culture"))
+
+    # --- GET REQUEST (Retrieving data for the editor) ---
     defaults = {
-        'cult_hero_title': 'Cultural Inventory', 'cult_hero_sub': 'The sacred sites...', 'cult_hero_tag': 'Preserving Heritage', 'cult_hero_bg': url_for('static', filename='images/municipal.jpg'),
-        'cult_church_title': 'Most Holy Rosary Parish', 'cult_old_img': url_for('static', filename='images/church_old.jpg'), 'cult_old_lbl': 'The Old Church', 'cult_new_img': url_for('static', filename='images/church_new.jpg'), 'cult_new_lbl': 'The Modern Structure',
-        'cult_hist_title': 'Historical Significance', 'cult_hist_text': 'The Parish stands as...', 'cult_arch_title': 'Architecture', 'cult_arch_text': 'Exterior details...',
-        'cult_patron_img': url_for('static', filename='images/mama_mary.jpg'), 'cult_patron_title': 'Our Lady of the Most Holy Rosary', 'cult_patron_sub': '"The beloved patroness..."', 'cult_patron_text': 'The image...',
-        'cult_mon_title': 'Historical Monuments', 'cult_mon_sub': 'Honoring Pillars',
-        'cult_m1_name': 'Padre Vicente Garcia', 'cult_m1_desc': 'A Filipino priest...', 'cult_m1_img': url_for('static', filename='images/monument_vicente.jpg'),
-        'cult_m2_name': 'Hon. Graciano R. Recto', 'cult_m2_desc': 'First Mayor...', 'cult_m2_img': url_for('static', filename='images/monument_recto.jpg'),
-        'cult_m3_name': 'Father Antonio', 'cult_m3_desc': 'Religious figure...', 'cult_m3_img': url_for('static', filename='images/monument_antonio.jpg')
+        'cult_hero_title': 'Cultural Inventory', 
+        'cult_hero_sub': 'The sacred sites...', 
+        'cult_hero_tag': 'Preserving Heritage', 
+        'cult_hero_bg': url_for('static', filename='images/municipal.jpg'),
+        'cult_church_title': 'Most Holy Rosary Parish', 
+        'cult_old_img': url_for('static', filename='images/church_old.jpg'), 
+        'cult_old_lbl': 'The Old Church', 
+        'cult_new_img': url_for('static', filename='images/church_new.jpg'), 
+        'cult_new_lbl': 'The Modern Structure',
+        'cult_hist_title': 'Historical Significance', 
+        'cult_hist_text': 'The Parish stands as...', 
+        'cult_arch_title': 'Architecture', 
+        'cult_arch_text': 'Exterior details...',
+        'cult_patron_img': url_for('static', filename='images/mama_mary.jpg'), 
+        'cult_patron_title': 'Our Lady of the Most Holy Rosary', 
+        'cult_patron_sub': '"The beloved patroness..."', 
+        'cult_patron_text': 'The image...',
+        'cult_mon_title': 'Historical Monuments', 
+        'cult_mon_sub': 'Honoring Pillars',
+        'cult_m1_name': 'Padre Vicente Garcia', 'cult_m1_desc': 'A Filipino priest...', 'cult_m1_img': url_for('static', filename='images/monument_vicente.jpg'), 'cult_m1_pos': '50',
+        'cult_m2_name': 'Hon. Graciano R. Recto', 'cult_m2_desc': 'First Mayor...', 'cult_m2_img': url_for('static', filename='images/monument_recto.jpg'), 'cult_m2_pos': '50',
+        'cult_m3_name': 'Father Antonio', 'cult_m3_desc': 'Religious figure...', 'cult_m3_img': url_for('static', filename='images/monument_antonio.jpg'), 'cult_m3_pos': '50'
     }
+    
     content = {}
-    for k, v in defaults.items(): content[k] = get_content(k, v)
+    for k, v in defaults.items(): 
+        content[k] = get_content(k, v)
+        
     return render_template("edit_cultural_inventory.html", content=content)
 
 @views.route("/edit-festival", methods=["GET", "POST"])
@@ -1585,16 +1980,29 @@ def edit_festival():
             return redirect(url_for("views.edit_festival"))
 
         if "add_gal" in request.form:
-            file = request.files.get("gal_img")
-            if file and file.filename != '':
-                new_gal = FestivalGalleryImage(
-                    caption=request.form.get("gal_cap"),
-                    link_url=request.form.get("gal_link"),
-                    image_url=save_file(file)
-                )
-                db.session.add(new_gal)
+            files = request.files.getlist("gal_img")
+            caption = request.form.get("gal_cap")
+            link_url = request.form.get("gal_link")
+            
+            image_added = False
+            for file in files:
+                if file and file.filename != '':
+                    path = save_file(file)
+                    if path:
+                        new_gal = FestivalGalleryImage(
+                            caption=caption,
+                            link_url=link_url,
+                            image_url=path
+                        )
+                        db.session.add(new_gal)
+                        image_added = True
+            
+            if image_added:
                 db.session.commit()
-                flash("Gallery image added!", "success")
+                flash("New gallery image(s) added successfully!", "success")
+            else:
+                flash("No images were selected for upload.", "error")
+                
             return redirect(url_for("views.edit_festival"))
 
         if "edit_gal" in request.form:

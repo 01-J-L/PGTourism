@@ -4,7 +4,6 @@
 
 {% block head %}
 <style>
-    /* Specific Hero for Attractions */
     .attractions-hero {
         background: linear-gradient(to bottom, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)),
         url("{{ url_for('static', filename=content.attr_hero_bg.replace('static/', '')) if 'static/uploads' in content.attr_hero_bg else content.attr_hero_bg }}");
@@ -14,7 +13,6 @@
     }
     .serif-head { font-family: 'Cinzel', serif; }
 
-    /* For media containers */
     .media-container img, .media-container video {
         width: 100%;
         height: 100%;
@@ -42,15 +40,11 @@
 <div class="bg-white">
     {% if attractions %}
         {% for attr in attractions %}
-        <!-- Alternating background colors based on loop index -->
         <section class="py-20 md:py-28 {{ 'bg-white' if loop.index0 % 2 == 0 else 'bg-slate-50' }} overflow-hidden">
             <div class="max-w-7xl mx-auto px-6">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                     
-                    <!-- MEDIA CONTAINER (Image or Video) -->
-                    <!-- Alternating order for Desktop (Media Left on even, Media Right on odd) -->
                     <div class="relative {{ 'order-1' if loop.index0 % 2 == 0 else 'order-1 lg:order-2' }} media-container" data-aos="{{ 'fade-right' if loop.index0 % 2 == 0 else 'fade-left' }}">
-                        <!-- Decorative background offset box -->
                         <div class="absolute -inset-4 {{ 'bg-yellow-100' if loop.index0 % 2 == 0 else 'bg-blue-100' }} rounded-xl transform {{ '-rotate-2' if loop.index0 % 2 == 0 else 'rotate-2' }} hidden md:block"></div>
                         <div class="relative rounded-xl overflow-hidden shadow-2xl border-4 border-white aspect-video md:aspect-[4/3]">
                             {% if attr.media_url %}
@@ -70,10 +64,8 @@
                         </div>
                     </div>
 
-                    <!-- TEXT CONTENT -->
                     <div class="{{ 'order-2' if loop.index0 % 2 == 0 else 'order-2 lg:order-1' }}" data-aos="{{ 'fade-left' if loop.index0 % 2 == 0 else 'fade-right' }}">
                         
-                        <!-- Tag -->
                         {% if attr.tag %}
                         <div class="mb-4">
                             <span class="bg-blue-900 text-white text-xs font-bold px-4 py-1.5 rounded-md uppercase tracking-wider shadow-sm">
@@ -85,28 +77,35 @@
                         <h2 class="text-3xl md:text-5xl font-bold text-slate-800 serif-head mb-6">{{ attr.name }}</h2>
                         
                         <div class="prose text-slate-600 leading-relaxed mb-8 text-justify md:text-left text-base md:text-lg">
-                            <p class="whitespace-pre-wrap">{{ attr.description }}</p>
+                            <p class="whitespace-pre-wrap line-clamp-4">{{ attr.description }}</p>
                         </div>
                         
-                        <div class="flex flex-col gap-4 border-t border-slate-200 pt-6">
-                            <!-- Location -->
-                            {% if attr.location %}
-                            <div class="flex items-center gap-3 text-sm md:text-base font-bold text-slate-700">
-                                <div class="w-8 h-8 rounded-full bg-red-100 text-red-500 flex items-center justify-center shrink-0">
-                                    <i class="ri-map-pin-fill"></i>
+                        <div class="flex flex-col sm:flex-row gap-4 border-t border-slate-200 pt-6 items-start sm:items-center">
+                            <!-- Left side with location/map -->
+                            <div class="flex-grow space-y-2">
+                                {% if attr.location %}
+                                <div class="flex items-center gap-3 text-sm md:text-base font-bold text-slate-700">
+                                    <div class="w-8 h-8 rounded-full bg-red-100 text-red-500 flex items-center justify-center shrink-0">
+                                        <i class="ri-map-pin-fill"></i>
+                                    </div>
+                                    {{ attr.location }}
                                 </div>
-                                {{ attr.location }}
+                                {% endif %}
+                                
+                                {% if attr.map_url %}
+                                <div>
+                                    <a href="{{ attr.map_url }}" target="_blank" class="inline-flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 hover:underline transition">
+                                        <i class="ri-map-2-line"></i> View on Google Maps
+                                    </a>
+                                </div>
+                                {% endif %}
                             </div>
-                            {% endif %}
-                            
-                            <!-- Map Button -->
-                            {% if attr.map_url %}
-                            <div>
-                                <a href="{{ attr.map_url }}" target="_blank" class="inline-flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 hover:underline transition">
-                                    <i class="ri-map-2-line"></i> View on Google Maps
+                            <!-- Right side with "Learn More" button -->
+                            <div class="shrink-0 w-full sm:w-auto">
+                                <a href="{{ url_for('views.attraction_detail', id=attr.id) }}" class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition w-full sm:w-auto">
+                                    Learn More <i class="ri-arrow-right-line"></i>
                                 </a>
                             </div>
-                            {% endif %}
                         </div>
                     </div>
 
@@ -115,7 +114,6 @@
         </section>
         {% endfor %}
     {% else %}
-        <!-- EMPTY STATE -->
         <section class="py-32 text-center bg-slate-50">
             <div class="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mx-auto text-slate-400 text-4xl mb-4">
                 <i class="ri-map-pin-user-line"></i>
@@ -125,5 +123,4 @@
         </section>
     {% endif %}
 </div>
-
 {% endblock %}

@@ -55,6 +55,24 @@
 
     <!-- Base Styles -->
     <style>
+        /* ==========================================
+           ANTI-COPY / TEXT SELECTION PROTECTION
+        ========================================== */
+        body {
+            -webkit-user-select: none; /* Safari */
+            -moz-user-select: none;    /* Firefox */
+            -ms-user-select: none;     /* IE10+/Edge */
+            user-select: none;         /* Standard */
+        }
+        
+        /* Allow selection inside forms so the Admin panel still works! */
+        input, textarea, select {
+            -webkit-user-select: auto;
+            -moz-user-select: auto;
+            -ms-user-select: auto;
+            user-select: auto;
+        }
+
         html,
         body {
             overflow-x: hidden;
@@ -121,7 +139,8 @@
     {% block head %}{% endblock %}
 </head>
 
-<body class="flex flex-col min-h-screen {% block body_class %}{% endblock %}">
+<!-- ADDED ondragstart="return false;" to prevent image/text dragging -->
+<body class="flex flex-col min-h-screen {% block body_class %}{% endblock %}" ondragstart="return false;">
 
     <!-- ==============================================
          GLOBAL NAVIGATION
@@ -550,6 +569,43 @@
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
                 openSearchModal();
+            }
+        });
+
+        // ==========================================
+        // ANTI-COPY & ANTI-RIGHT-CLICK PROTECTION
+        // ==========================================
+        
+        // Disable Right-Click (Context Menu)
+        document.addEventListener('contextmenu', function(e) {
+            // Allow right click if they are inside an input/textarea (for admins)
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            e.preventDefault();
+        });
+
+        // Disable Copy
+        document.addEventListener('copy', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            e.preventDefault();
+        });
+
+        // Disable Cut
+        document.addEventListener('cut', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            e.preventDefault();
+        });
+
+        // Disable Keyboard Shortcuts (Ctrl+C, Ctrl+X, Ctrl+U, Ctrl+P)
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            
+            // ctrlKey applies to Windows/Linux, metaKey applies to Mac (Command key)
+            if ((e.ctrlKey || e.metaKey) && 
+                (e.key === 'c' || e.key === 'C' || 
+                 e.key === 'x' || e.key === 'X' || 
+                 e.key === 'u' || e.key === 'U' || 
+                 e.key === 'p' || e.key === 'P')) {
+                e.preventDefault();
             }
         });
     </script>

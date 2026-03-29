@@ -27,6 +27,14 @@
     .ordinance-paper::before {
         content: ''; position: absolute; top: 0; bottom: 0; left: 40px; border-left: 2px solid #e5d5b7;
     }
+
+    /* Lightbox modal transition */
+    #image-lightbox {
+        transition: opacity 0.3s ease-in-out;
+    }
+    #lightbox-content {
+        transition: transform 0.3s ease-in-out;
+    }
 </style>
 {% endblock %}
 
@@ -164,29 +172,16 @@
                         {% set span_class = "col-span-2 row-span-1" %}
                     {% endif %}
 
-                    <div class="{{ span_class }} rounded-xl overflow-hidden shadow-lg group relative bg-slate-200">
-                        {% if img.link_url %}
-                            <!-- Image with Clickable Link -->
-                            <a href="{{ img.link_url }}" target="_blank" class="block w-full h-full relative cursor-pointer">
-                                <img src="{{ url_for('static', filename=img.image_url.replace('static/', '')) if 'static/uploads' in img.image_url else img.image_url }}" 
-                                     class="w-full h-full object-cover transition duration-700 group-hover:scale-110" alt="{{ img.caption }}">
-                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition duration-300 flex flex-col items-center justify-center p-4 text-center">
-                                    <div class="bg-white/90 text-slate-800 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 mb-2 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition">
-                                        <i class="ri-external-link-line"></i> View Link
-                                    </div>
-                                    {% if img.caption %}<span class="text-white text-xs font-bold drop-shadow-md">{{ img.caption }}</span>{% endif %}
-                                </div>
-                            </a>
-                        {% else %}
-                            <!-- Image Only -->
-                            <img src="{{ url_for('static', filename=img.image_url.replace('static/', '')) if 'static/uploads' in img.image_url else img.image_url }}" 
-                                 class="w-full h-full object-cover transition duration-700 group-hover:scale-110" alt="{{ img.caption }}">
-                            {% if img.caption %}
-                            <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition">
-                                <span class="text-white text-xs font-bold">{{ img.caption }}</span>
-                            </div>
-                            {% endif %}
-                        {% endif %}
+                    <div class="{{ span_class }} rounded-xl overflow-hidden shadow-lg group relative bg-slate-200 cursor-pointer"
+                         onclick="openLightbox(this)"
+                         data-src="{{ url_for('static', filename=img.image_url.replace('static/', '')) if 'static/uploads' in img.image_url else img.image_url }}"
+                         data-caption="{{ img.caption or '' }}"
+                         data-link="{{ img.link_url or '' }}">
+                        <img src="{{ url_for('static', filename=img.image_url.replace('static/', '')) if 'static/uploads' in img.image_url else img.image_url }}" 
+                             class="w-full h-full object-cover transition duration-700 group-hover:scale-110" alt="{{ img.caption }}">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center p-4">
+                            <i class="ri-zoom-in-line text-white text-4xl"></i>
+                        </div>
                     </div>
                 {% endfor %}
             </div>
@@ -226,8 +221,103 @@
                 <p class="text-slate-500">No images have been added to the gallery yet.</p>
             </div>
         {% endif %}
-
     </div>
 </section>
 
+<!-- LIGHTBOX MODAL -->
+<div id="image-lightbox" class="fixed inset-0 z-[999] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-md opacity-0" onclick="closeLightbox()">
+    <div id="lightbox-content" class="relative bg-white rounded-lg shadow-2xl max-w-4xl max-h-[90vh] flex flex-col w-full scale-95" onclick="event.stopPropagation()">
+        
+        <button onclick="closeLightbox()" class="absolute -top-4 -right-4 z-10 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-lg hover:bg-red-500 hover:text-white transition">
+            <i class="ri-close-line text-2xl"></i>
+        </button>
+
+        <div class="p-4 flex-grow flex items-center justify-center overflow-hidden">
+             <img id="lightbox-img" src="" class="max-w-full max-h-[70vh] object-contain">
+        </div>
+
+        <div id="lightbox-footer" class="hidden p-4 border-t border-slate-200 bg-slate-50 flex-col sm:flex-row justify-between items-center gap-3">
+             <p id="lightbox-caption" class="text-sm text-slate-600 text-center sm:text-left"></p>
+             <a id="lightbox-link" href="#" target="_blank" class="hidden items-center gap-2 bg-primary hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-lg shadow-md transition whitespace-nowrap">
+                 <i class="ri-external-link-line"></i> Visit Link
+             </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+{{ super() }}
+<script>
+    function openLightbox(el) {
+        const src = el.dataset.src;
+        const caption = el.dataset.caption;
+        const link = el.dataset.link;
+
+        const modal = document.getElementById('image-lightbox');
+        const content = document.getElementById('lightbox-content');
+        const img = document.getElementById('lightbox-img');
+        const captionEl = document.getElementById('lightbox-caption');
+        const linkEl = document.getElementById('lightbox-link');
+        const footerEl = document.getElementById('lightbox-footer');
+
+        img.src = src;
+        
+        let hasFooterContent = false;
+
+        if (caption) {
+            captionEl.innerText = caption;
+            captionEl.classList.remove('hidden');
+            hasFooterContent = true;
+        } else {
+            captionEl.classList.add('hidden');
+            captionEl.innerText = '';
+        }
+
+        if (link) {
+            linkEl.href = link;
+            linkEl.classList.remove('hidden');
+            linkEl.classList.add('inline-flex');
+            hasFooterContent = true;
+        } else {
+            linkEl.classList.add('hidden');
+            linkEl.classList.remove('inline-flex');
+        }
+        
+        if (hasFooterContent) {
+            footerEl.classList.remove('hidden');
+            footerEl.classList.add('flex');
+        } else {
+            footerEl.classList.add('hidden');
+            footerEl.classList.remove('flex');
+        }
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-95');
+        }, 10);
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        const modal = document.getElementById('image-lightbox');
+        const content = document.getElementById('lightbox-content');
+        
+        modal.classList.add('opacity-0');
+        content.classList.add('scale-95');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.getElementById('lightbox-img').src = "";
+            document.body.style.overflow = '';
+        }, 300);
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !document.getElementById('image-lightbox').classList.contains('hidden')) {
+            closeLightbox();
+        }
+    });
+</script>
 {% endblock %}

@@ -277,13 +277,13 @@
 
                         <!-- Add Gallery Form -->
                         <div class="bg-purple-50/50 p-4 rounded-lg border border-purple-100">
-                            <p class="text-[10px] font-bold text-purple-600 uppercase mb-2">Upload Image</p>
+                            <p class="text-[10px] font-bold text-purple-600 uppercase mb-2">Upload New Image(s)</p>
                             <form method="POST" enctype="multipart/form-data" class="space-y-2">
                                 <input type="hidden" name="add_gal" value="true">
-                                <input type="file" name="gal_img" required class="text-[10px] text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-purple-100 file:text-purple-700 cursor-pointer">
-                                <input type="text" name="gal_cap" placeholder="Alt Text / Caption" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs">
-                                <input type="url" name="gal_link" placeholder="Link URL (Optional)" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-mono">
-                                <button type="submit" class="w-full bg-purple-500 hover:bg-purple-600 text-white text-xs font-bold py-1.5 rounded transition"><i class="ri-upload-2-line"></i> Add</button>
+                                <input type="file" name="gal_img" multiple class="text-[10px] text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-purple-100 file:text-purple-700 cursor-pointer">
+                                <input type="text" name="gal_cap" placeholder="Caption for all new images (optional)" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs">
+                                <input type="url" name="gal_link" placeholder="Link URL for all new images (optional)" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-mono">
+                                <button type="submit" class="w-full bg-purple-500 hover:bg-purple-600 text-white text-xs font-bold py-1.5 rounded transition"><i class="ri-upload-2-line"></i> Add to Gallery</button>
                             </form>
                         </div>
                     </div>
