@@ -1,11 +1,21 @@
-from webapp import create_app, db
+import sqlite3
+import os
 
-# This script ensures the new 'history_media' table is created
-# in your database without affecting existing data.
+# Adjust this path if your dev.db is inside an 'instance' folder:
+db_path = "instance/dev.db" 
 
-app = create_app()
 
-with app.app_context():
-    print("Connecting to the database and creating new tables if they don't exist...")
-    db.create_all()
-    print("[SUCCESS] Database schema is up to date. The 'history_media' table has been created.")
+if os.path.exists(db_path):
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Add the missing column to the table
+        cursor.execute("ALTER TABLE charter_service ADD COLUMN total_processing_time VARCHAR(150) DEFAULT 'Varies'")
+        conn.commit()
+        conn.close()
+        print("Success! The missing column was added to the database.")
+    except sqlite3.OperationalError as e:
+        print(f"Notice: {e} (The column might already exist)")
+else:
+    print(f"Error: Could not find {db_path}. If your DB is inside an 'instance' folder, update the db_path variable in this script.")

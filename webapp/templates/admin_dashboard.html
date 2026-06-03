@@ -348,6 +348,19 @@
                         </div>
                         <span class="font-bold text-slate-700">Edit Contact</span>
                     </a>
+                    <a href="{{ url_for('views.edit_events') }}"
+                        class="bg-white p-5 rounded-lg border hover:border-red-500 flex items-center gap-4">
+                        <i class="ri-calendar-event-line text-2xl text-red-600"></i>
+                        <span class="font-bold text-slate-700">Manage Events</span>
+                    </a>
+                    <a href="{{ url_for('views.edit_charter') }}"
+                        class="bg-white p-5 rounded-lg border border-slate-200 hover:border-slate-800 hover:ring-1 hover:ring-slate-800 transition group flex items-center gap-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center text-xl shrink-0">
+                            <i class="ri-shield-user-line"></i>
+                        </div>
+                        <span class="font-bold text-slate-700">Edit Citizen's Charter</span>
+                    </a>
 
                     {% if user.is_super_admin %}
                     <a href="{{ url_for('views.manage_users') }}"

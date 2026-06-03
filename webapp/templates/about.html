@@ -173,30 +173,78 @@
     </div>
 </section>
 
+<!-- TOURISM GROWTH CHART SECTION -->
+{% if content.about_chart_path %}
+<section class="py-20 bg-slate-50">
+    <div class="max-w-5xl mx-auto px-6">
+        <div class="text-center mb-12" data-aos="fade-up">
+            <h2 class="text-3xl md:text-4xl font-bold text-slate-800">Our Growing Tourism</h2>
+            <div class="h-1 w-20 bg-primary mx-auto mt-4 rounded"></div>
+            <p class="text-slate-500 mt-4">A visual representation of annual tourist arrivals from 2022 to 2026.</p>
+        </div>
+        
+        <div class="bg-white p-4 md:p-10 rounded-3xl shadow-2xl border border-slate-200" data-aos="zoom-in">
+            <img src="{{ url_for('static', filename=content.about_chart_path.replace('static/', '')) if 'static/uploads' in content.about_chart_path else content.about_chart_path }}" 
+                 alt="Tourism Arrivals Statistics" class="w-full h-auto rounded-xl">
+            
+            <div class="mt-6 flex items-center justify-center gap-2 text-slate-400 text-xs italic">
+                <i class="ri-information-line"></i>
+                <span>Data based on official municipal records.</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
 <!-- FAST FACTS STRIP -->
 <section class="py-16 bg-primary text-white">
     <div class="max-w-7xl mx-auto px-6">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-white/20">
+            
+            <!-- Fact 1 -->
+            {% if content.fact_year_link %}
+            <a href="{{ content.fact_year_link }}" {% if content.fact_year_link.startswith('http') %}target="_blank"{% endif %} class="stat-card p-4 block hover:bg-white/10 rounded-xl transition cursor-pointer" data-aos="zoom-in" data-aos-delay="100">
+            {% else %}
             <div class="stat-card p-4" data-aos="zoom-in" data-aos-delay="100">
-                <i class="ri-calendar-check-line text-4xl text-yellow-400 mb-2 block transition duration-300"></i>
+            {% endif %}
+                <i class="ri-calendar-check-line text-4xl text-yellow-400 mb-2 block transition duration-300 group-hover:scale-110"></i>
                 <span class="text-3xl font-bold font-serif">{{ content.fact_year }}</span>
                 <p class="text-xs uppercase tracking-wider opacity-80 mt-1">Year Founded</p>
-            </div>
+            {% if content.fact_year_link %}</a>{% else %}</div>{% endif %}
+
+            <!-- Fact 2 -->
+            {% if content.fact_barangays_link %}
+            <a href="{{ content.fact_barangays_link }}" {% if content.fact_barangays_link.startswith('http') %}target="_blank"{% endif %} class="stat-card p-4 block hover:bg-white/10 rounded-xl transition cursor-pointer" data-aos="zoom-in" data-aos-delay="200">
+            {% else %}
             <div class="stat-card p-4" data-aos="zoom-in" data-aos-delay="200">
-                <i class="ri-map-2-line text-4xl text-yellow-400 mb-2 block transition duration-300"></i>
+            {% endif %}
+                <i class="ri-map-2-line text-4xl text-yellow-400 mb-2 block transition duration-300 group-hover:scale-110"></i>
                 <span class="text-3xl font-bold font-serif">{{ content.fact_barangays }}</span>
                 <p class="text-xs uppercase tracking-wider opacity-80 mt-1">Barangays</p>
-            </div>
+            {% if content.fact_barangays_link %}</a>{% else %}</div>{% endif %}
+
+            <!-- Fact 3 -->
+            {% if content.fact_population_link %}
+            <a href="{{ content.fact_population_link }}" {% if content.fact_population_link.startswith('http') %}target="_blank"{% endif %} class="stat-card p-4 block hover:bg-white/10 rounded-xl transition cursor-pointer" data-aos="zoom-in" data-aos-delay="300">
+            {% else %}
             <div class="stat-card p-4" data-aos="zoom-in" data-aos-delay="300">
-                <i class="ri-group-line text-4xl text-yellow-400 mb-2 block transition duration-300"></i>
+            {% endif %}
+                <i class="ri-group-line text-4xl text-yellow-400 mb-2 block transition duration-300 group-hover:scale-110"></i>
                 <span class="text-3xl font-bold font-serif">{{ content.fact_population }}</span>
                 <p class="text-xs uppercase tracking-wider opacity-80 mt-1">Population</p>
-            </div>
+            {% if content.fact_population_link %}</a>{% else %}</div>{% endif %}
+
+            <!-- Fact 4 -->
+            {% if content.fact_festival_link %}
+            <a href="{{ content.fact_festival_link }}" {% if content.fact_festival_link.startswith('http') %}target="_blank"{% endif %} class="stat-card p-4 block hover:bg-white/10 rounded-xl transition cursor-pointer" data-aos="zoom-in" data-aos-delay="400">
+            {% else %}
             <div class="stat-card p-4" data-aos="zoom-in" data-aos-delay="400">
-                <i class="ri-goblet-line text-4xl text-yellow-400 mb-2 block transition duration-300"></i>
+            {% endif %}
+                <i class="ri-goblet-line text-4xl text-yellow-400 mb-2 block transition duration-300 group-hover:scale-110"></i>
                 <span class="text-3xl font-bold font-serif">{{ content.fact_festival }}</span>
                 <p class="text-xs uppercase tracking-wider opacity-80 mt-1">Kabakahan Festival</p>
-            </div>
+            {% if content.fact_festival_link %}</a>{% else %}</div>{% endif %}
+
         </div>
     </div>
 </section>

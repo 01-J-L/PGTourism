@@ -3,8 +3,12 @@ Flask-SQLAlchemy
 Flask-Login
 Flask-Mail
 python-dotenv
+gunicorn
 Pillow
 pypdf
 reportlab
 python-docx
 docx2pdf
+Flask-WTF
+Flask-Limiter
+bleach

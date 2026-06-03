@@ -24,6 +24,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Cinzel:wght@600;700&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <!-- Tailwind Configuration -->
     <script>
@@ -59,14 +61,20 @@
            ANTI-COPY / TEXT SELECTION PROTECTION
         ========================================== */
         body {
-            -webkit-user-select: none; /* Safari */
-            -moz-user-select: none;    /* Firefox */
-            -ms-user-select: none;     /* IE10+/Edge */
-            user-select: none;         /* Standard */
+            -webkit-user-select: none;
+            /* Safari */
+            -moz-user-select: none;
+            /* Firefox */
+            -ms-user-select: none;
+            /* IE10+/Edge */
+            user-select: none;
+            /* Standard */
         }
-        
+
         /* Allow selection inside forms so the Admin panel still works! */
-        input, textarea, select {
+        input,
+        textarea,
+        select {
             -webkit-user-select: auto;
             -moz-user-select: auto;
             -ms-user-select: auto;
@@ -140,6 +148,7 @@
 </head>
 
 <!-- ADDED ondragstart="return false;" to prevent image/text dragging -->
+
 <body class="flex flex-col min-h-screen {% block body_class %}{% endblock %}" ondragstart="return false;">
 
     <!-- ==============================================
@@ -161,10 +170,10 @@
                         class="h-10 sm:h-12 w-auto object-contain transition group-hover:scale-105">
                     <div class="flex flex-col">
                         <span
-                            class="text-white font-bold tracking-widest text-[9px] sm:text-xs uppercase leading-tight">Tourism</span>
+                            class="text-white font-bold tracking-widest text-[9px] sm:text-xl uppercase leading-tight">Tourism</span>
                         <span
-                            class="text-yellow-400 font-serif text-sm sm:text-lg leading-none tracking-wide whitespace-nowrap">Padre
-                            Garcia</span>
+                            class="text-yellow-400 font-serif text-sm sm:text-lg leading-none tracking-wide whitespace-nowrap">Culture,
+                            and Arts</span>
                     </div>
                     {% else %}
                     <!-- Default Fallback Icon & Text -->
@@ -192,7 +201,8 @@
                 <div class="hidden md:flex items-center gap-5 lg:gap-8">
                     <a href="{{ url_for('views.home') }}"
                         class="{{ 'text-yellow-400 font-bold border-b-2 border-yellow-400' if request.endpoint == 'views.home' else 'text-white/90 hover:text-white' }} text-sm font-medium transition py-1">Home</a>
-
+                    <a href="{{ url_for('views.events') }}"
+                        class="{{ 'text-yellow-400 font-bold border-b-2 border-yellow-400' if request.endpoint == 'views.events' else 'text-white/90 hover:text-white' }} text-sm font-medium transition py-1">Events</a>
                     <!-- Dropdown: The Town -->
                     <div class="relative group h-full flex items-center">
                         <button
@@ -215,6 +225,9 @@
                             <a href="{{ url_for('views.ordinances') }}"
                                 class="block px-6 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition flex items-center"><i
                                     class="ri-file-list-3-line mr-3 text-yellow-500 text-lg"></i> Ordinances</a>
+                            <a href="{{ url_for('views.charter') }}"
+                                class="block px-6 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition flex items-center"><i
+                                    class="ri-shield-user-line mr-3 text-yellow-500 text-lg"></i> Citizen's Charter</a>
                         </div>
                     </div>
 
@@ -222,14 +235,14 @@
                     <div class="relative group h-full flex items-center">
                         <button
                             class="flex items-center gap-1 text-white/90 hover:text-white text-sm font-medium transition focus:outline-none py-4">
-                            Tourism <i
+                            Explore <i
                                 class="ri-arrow-down-s-line text-xs opacity-70 group-hover:rotate-180 transition-transform duration-300"></i>
                         </button>
                         <div
                             class="absolute top-full left-1/2 -translate-x-1/2 w-64 bg-white rounded-lg shadow-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 border-t-4 border-yellow-500">
                             <a href="{{ url_for('views.attractions') }}"
                                 class="block px-6 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition flex items-center"><i
-                                    class="ri-map-pin-line mr-3 text-yellow-500 text-lg"></i> Major Attractions</a>
+                                    class="ri-map-pin-line mr-3 text-yellow-500 text-lg"></i> Tourist Attractions</a>
                             <a href="{{ url_for('views.culture') }}"
                                 class="block px-6 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition flex items-center"><i
                                     class="ri-bank-line mr-3 text-yellow-500 text-lg"></i> Cultural Inventory</a>
@@ -250,7 +263,9 @@
                         class="{{ 'text-yellow-400 font-bold border-b-2 border-yellow-400' if request.endpoint == 'views.contacts' else 'text-white/90 hover:text-white' }} text-sm font-medium transition py-1">Contact</a>
 
                     <!-- GLOBAL SEARCH ICON (DESKTOP) -->
-                    <button onclick="openSearchModal()" class="text-white/90 hover:text-yellow-400 transition ml-2 text-lg focus:outline-none" title="Search (Ctrl+K)">
+                    <button onclick="openSearchModal()"
+                        class="text-white/90 hover:text-yellow-400 transition ml-2 text-lg focus:outline-none"
+                        title="Search (Ctrl+K)">
                         <i class="ri-search-line"></i>
                     </button>
 
@@ -273,10 +288,11 @@
         <div id="mobile-menu"
             class="md:hidden bg-slate-900 border-t border-white/10 w-full absolute top-16 left-0 right-0 shadow-2xl">
             <div class="px-4 py-6 space-y-1 h-[calc(100vh-64px)] overflow-y-auto pb-20">
-                
+
                 <!-- MOBILE SEARCH BAR TRIGGER -->
                 <div class="px-3 pb-4 mb-2 border-b border-white/10">
-                    <button onclick="openSearchModal(); document.getElementById('mobile-menu-btn').click();" class="w-full flex items-center gap-3 bg-white/10 text-white/70 px-4 py-3 rounded-lg hover:bg-white/20 transition focus:outline-none">
+                    <button onclick="openSearchModal(); document.getElementById('mobile-menu-btn').click();"
+                        class="w-full flex items-center gap-3 bg-white/10 text-white/70 px-4 py-3 rounded-lg hover:bg-white/20 transition focus:outline-none">
                         <i class="ri-search-line"></i>
                         <span class="text-sm font-medium">Search website...</span>
                     </button>
@@ -285,7 +301,10 @@
                 <a href="{{ url_for('views.home') }}"
                     class="block px-3 py-3 rounded-lg text-lg font-medium {{ 'text-yellow-400 bg-white/5' if request.endpoint == 'views.home' else 'text-white hover:bg-white/10' }}"><i
                         class="ri-home-line mr-2 opacity-70"></i> Home</a>
-
+                <a href="{{ url_for('views.events') }}"
+                    class="block px-3 py-3 rounded-lg text-lg font-medium {{ 'text-yellow-400 bg-white/5' if request.endpoint == 'views.events' else 'text-white hover:bg-white/10' }}">
+                    <i class="ri-calendar-event-line mr-2 opacity-70"></i> Events
+                </a>
                 <div class="border-t border-white/5 pt-1 mt-1">
                     <button onclick="toggleSubmenu('town-submenu', this)"
                         class="w-full flex justify-between items-center px-3 py-3 rounded-lg text-lg font-medium text-white hover:bg-white/10 focus:outline-none transition-colors">
@@ -301,6 +320,8 @@
                             class="block px-10 py-3 text-sm text-slate-300 hover:text-yellow-400">Commerce</a>
                         <a href="{{ url_for('views.ordinances') }}"
                             class="block px-10 py-3 text-sm text-slate-300 hover:text-yellow-400">Ordinances</a>
+                        <a href="{{ url_for('views.charter') }}"
+                            class="block px-10 py-3 text-sm text-slate-300 hover:text-yellow-400">Citizen's Charter</a>
                     </div>
                 </div>
 
@@ -312,7 +333,8 @@
                     </button>
                     <div id="tourism-submenu" class="mobile-submenu bg-black/20 rounded-lg mx-2 mb-1">
                         <a href="{{ url_for('views.attractions') }}"
-                            class="block px-10 py-3 text-sm text-slate-300 hover:text-yellow-400">Major Attractions</a>
+                            class="block px-10 py-3 text-sm text-slate-300 hover:text-yellow-400">Tourist
+                            Attractions</a>
                         <a href="{{ url_for('views.culture') }}"
                             class="block px-10 py-3 text-sm text-slate-300 hover:text-yellow-400">Cultural Inventory</a>
                         <a href="{{ url_for('views.festival') }}"
@@ -462,19 +484,27 @@
     <!-- ==============================================
          GLOBAL SEARCH MODAL
     =============================================== -->
-    <div id="searchModal" class="fixed inset-0 z-[9999] hidden flex items-start justify-center pt-20 px-4 sm:px-6 bg-slate-900/80 backdrop-blur-md transition-opacity opacity-0 duration-300">
-        <div id="searchModalContent" class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 relative border border-slate-200">
+    <div id="searchModal"
+        class="fixed inset-0 z-[9999] hidden flex items-start justify-center pt-20 px-4 sm:px-6 bg-slate-900/80 backdrop-blur-md transition-opacity opacity-0 duration-300">
+        <div id="searchModalContent"
+            class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 relative border border-slate-200">
             <!-- Search Form -->
-            <form action="{{ url_for('views.global_search') }}" method="GET" class="flex items-center px-4 py-3 sm:px-6 sm:py-4">
+            <form action="{{ url_for('views.global_search') }}" method="GET"
+                class="flex items-center px-4 py-3 sm:px-6 sm:py-4">
                 <i class="ri-search-line text-slate-400 text-2xl mr-3"></i>
-                <input type="text" name="q" id="globalSearchInput" placeholder="Search destinations, ordinances, history..." 
-                    class="w-full bg-transparent text-slate-800 text-lg md:text-xl font-medium focus:outline-none placeholder-slate-400" autocomplete="off" required>
-                <button type="button" onclick="closeSearchModal()" class="text-slate-400 hover:text-red-500 p-2 transition rounded-full hover:bg-slate-100 flex-shrink-0 focus:outline-none">
+                <input type="text" name="q" id="globalSearchInput"
+                    placeholder="Search destinations, ordinances, history..."
+                    class="w-full bg-transparent text-slate-800 text-lg md:text-xl font-medium focus:outline-none placeholder-slate-400"
+                    autocomplete="off" required>
+                <button type="button" onclick="closeSearchModal()"
+                    class="text-slate-400 hover:text-red-500 p-2 transition rounded-full hover:bg-slate-100 flex-shrink-0 focus:outline-none">
                     <i class="ri-close-line text-2xl"></i>
                 </button>
             </form>
-            <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
-                <span>Type your query and press <kbd class="font-mono bg-white border border-slate-200 rounded px-2 py-0.5 shadow-sm text-slate-700 font-bold mx-1">Enter</kbd></span>
+            <div
+                class="px-6 py-3 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
+                <span>Type your query and press <kbd
+                        class="font-mono bg-white border border-slate-200 rounded px-2 py-0.5 shadow-sm text-slate-700 font-bold mx-1">Enter</kbd></span>
                 <span><kbd class="font-mono text-slate-400">ESC</kbd> to close</span>
             </div>
         </div>
@@ -547,20 +577,20 @@
             }, 10);
             document.body.style.overflow = 'hidden';
         }
-        
+
         function closeSearchModal() {
             const modal = document.getElementById('searchModal');
             const content = document.getElementById('searchModalContent');
             modal.classList.add('opacity-0');
             content.classList.add('scale-95');
-            setTimeout(() => { 
-                modal.classList.add('hidden'); 
+            setTimeout(() => {
+                modal.classList.add('hidden');
                 document.body.style.overflow = '';
             }, 300);
         }
 
         // Global Keyboard Shortcuts
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             // Close on ESC
             if (e.key === 'Escape' && !document.getElementById('searchModal').classList.contains('hidden')) {
                 closeSearchModal();
@@ -575,36 +605,36 @@
         // ==========================================
         // ANTI-COPY & ANTI-RIGHT-CLICK PROTECTION
         // ==========================================
-        
+
         // Disable Right-Click (Context Menu)
-        document.addEventListener('contextmenu', function(e) {
+        document.addEventListener('contextmenu', function (e) {
             // Allow right click if they are inside an input/textarea (for admins)
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
             e.preventDefault();
         });
 
         // Disable Copy
-        document.addEventListener('copy', function(e) {
+        document.addEventListener('copy', function (e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
             e.preventDefault();
         });
 
         // Disable Cut
-        document.addEventListener('cut', function(e) {
+        document.addEventListener('cut', function (e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
             e.preventDefault();
         });
 
         // Disable Keyboard Shortcuts (Ctrl+C, Ctrl+X, Ctrl+U, Ctrl+P)
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-            
+
             // ctrlKey applies to Windows/Linux, metaKey applies to Mac (Command key)
-            if ((e.ctrlKey || e.metaKey) && 
-                (e.key === 'c' || e.key === 'C' || 
-                 e.key === 'x' || e.key === 'X' || 
-                 e.key === 'u' || e.key === 'U' || 
-                 e.key === 'p' || e.key === 'P')) {
+            if ((e.ctrlKey || e.metaKey) &&
+                (e.key === 'c' || e.key === 'C' ||
+                    e.key === 'x' || e.key === 'X' ||
+                    e.key === 'u' || e.key === 'U' ||
+                    e.key === 'p' || e.key === 'P')) {
                 e.preventDefault();
             }
         });

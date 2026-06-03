@@ -12,6 +12,7 @@
 {% block content %}
 <div class="pt-24 pb-20 px-8 max-w-3xl mx-auto">
     <form id="mainForm" method="POST" enctype="multipart/form-data" class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div><label class="text-xs font-bold uppercase text-slate-500 mb-1 block">Headline</label><input type="text" name="about_title" value="{{ content.about_title }}" class="w-full border rounded p-2"></div>
         <div><label class="text-xs font-bold uppercase text-slate-500 mb-1 block">Summary Text</label><textarea name="about_text" rows="5" class="w-full border rounded p-2">{{ content.about_text }}</textarea></div>
         <div>

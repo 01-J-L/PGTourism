@@ -37,6 +37,7 @@
         <!-- Form -->
         <!-- No action means it posts to /login -->
         <form method="POST" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label class="block text-slate-300 text-xs font-bold uppercase mb-2">Username</label>
                 <div class="relative">

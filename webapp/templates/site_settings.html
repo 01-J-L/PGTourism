@@ -45,6 +45,7 @@
             </div>
             
             <form method="POST" class="shrink-0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="toggle_maintenance" value="true">
                 <label class="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" name="maintenance_mode" value="true" class="sr-only peer" onchange="this.form.submit()" 
@@ -71,6 +72,7 @@
             </div>
             
             <form method="POST" class="flex flex-col sm:flex-row gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="update_receiver_email" value="true">
                 <div class="relative w-full max-w-md">
                     <i class="ri-mail-line absolute left-3 top-3 text-slate-400"></i>

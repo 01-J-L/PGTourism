@@ -44,7 +44,9 @@
 
 {% block content %}
 <!-- Master Form for Static Text/Images -->
-<form id="staticForm" method="POST" enctype="multipart/form-data" class="hidden"></form>
+<form id="staticForm" method="POST" enctype="multipart/form-data" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
 
 <div class="min-h-screen bg-slate-50 pt-24 pb-20 px-4 md:px-8">
     <div class="max-w-7xl mx-auto">
@@ -83,6 +85,7 @@
                                     <div class="flex flex-col gap-2 shrink-0">
                                         <button type="button" onclick="openDishModal('{{ dish.id }}', '{{ dish.name|replace("'", "\\'") }}', '{{ dish.tagline|replace("'", "\\'") }}', `{{ dish.description|replace("`", "\\`") }}`, '{{ dish.link_url }}')" class="w-8 h-8 rounded bg-blue-100 text-blue-600 hover:bg-blue-500 hover:text-white flex items-center justify-center transition"><i class="ri-pencil-line"></i></button>
                                         <form method="POST" onsubmit="return confirm('Delete this dish?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="delete_dish" value="true">
                                             <input type="hidden" name="dish_id" value="{{ dish.id }}">
                                             <button type="submit" class="w-8 h-8 rounded bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition"><i class="ri-delete-bin-line"></i></button>
@@ -99,6 +102,7 @@
                         <div class="bg-orange-50/50 rounded-lg p-5 border border-orange-100 mt-4">
                             <h4 class="text-xs font-bold text-orange-600 uppercase mb-4">Add Main Dish</h4>
                             <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="add_dish" value="true">
                                 <div class="grid grid-cols-2 gap-3">
                                     <input type="text" name="dish_name" placeholder="Dish Name (e.g. Batangas Goto)" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
@@ -159,6 +163,7 @@
                                     <div class="flex flex-col gap-2 shrink-0">
                                         <button type="button" onclick="openSweetModal('{{ sweet.id }}', '{{ sweet.name|replace("'", "\\'") }}', `{{ sweet.description|replace("`", "\\`") }}`, '{{ sweet.link_url }}')" class="w-7 h-7 rounded bg-blue-100 text-blue-600 hover:bg-blue-500 hover:text-white flex items-center justify-center transition"><i class="ri-pencil-line text-xs"></i></button>
                                         <form method="POST" onsubmit="return confirm('Delete this sweet?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="delete_sweet" value="true">
                                             <input type="hidden" name="sweet_id" value="{{ sweet.id }}">
                                             <button type="submit" class="w-7 h-7 rounded bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition"><i class="ri-delete-bin-line text-xs"></i></button>
@@ -175,6 +180,7 @@
                         <div class="bg-yellow-50/50 rounded-lg p-5 border border-yellow-200 mt-4">
                             <h4 class="text-xs font-bold text-yellow-600 uppercase mb-4">Add Sweet Treat</h4>
                             <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="add_sweet" value="true">
                                 <input type="text" name="sweet_name" placeholder="Item Name (e.g. Pastillas)" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow-500">
                                 <textarea name="sweet_desc" placeholder="Description..." rows="2" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow-500 resize-none"></textarea>
@@ -254,6 +260,7 @@
             <button onclick="closeModal('dishModal')" class="text-slate-400 hover:text-red-500"><i class="ri-close-line text-xl"></i></button>
         </div>
         <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="edit_dish" value="true">
             <input type="hidden" id="editDishId" name="dish_id" value="">
             
@@ -303,6 +310,7 @@
             <button onclick="closeModal('sweetModal')" class="text-slate-400 hover:text-red-500"><i class="ri-close-line text-xl"></i></button>
         </div>
         <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="edit_sweet" value="true">
             <input type="hidden" id="editSweetId" name="sweet_id" value="">
             

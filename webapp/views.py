@@ -11,6 +11,7 @@ import io
 import datetime 
 import tempfile
 import re # Added for ordinance sorting
+import bleach
 
 from docx2pdf import convert
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
@@ -25,10 +26,10 @@ from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from sqlalchemy import or_
-from . import db, mail
+from . import db, mail, limiter
 
 # Update this line to include all your models
-from .models import User, SiteContent, TouristSpot, Ordinance, SocialLink, FooterLink, EmergencyHotline, Mayor, Barangay, FestivalEvent, CommercialEstablishment, Accommodation, FinancialInstitution, MajorAttraction, FoodDish, SweetTreat, FestivalGalleryImage, AttractionMedia, HistoryMedia
+from .models import User, SiteContent, TouristSpot, Ordinance, SocialLink, FooterLink, EmergencyHotline, Mayor, Barangay, FestivalEvent, CommercialEstablishment, Accommodation, FinancialInstitution, MajorAttraction, FoodDish, SweetTreat, FestivalGalleryImage, AttractionMedia, HistoryMedia, BuildingImage, Event, Facility, DepartmentStore, CulturalProperty, CharterService, CharterRequirement, CharterStep
 
 views = Blueprint("views", __name__)
 
@@ -84,6 +85,7 @@ def get_ord_sort_key(ord_obj):
         return (-int(nums[0]), 0, text)
     else:
         return (0, 0, text)
+
 
 def get_font(font_size):
     """Tries to load a system scalable font. Fallbacks if running on bare Linux."""
@@ -191,15 +193,19 @@ def home():
         'hero_title_2': get_content('hero_title_2', 'Garcia'),
         'hero_subtitle': get_content('hero_subtitle', 'Discover the rich heritage and vibrant culture of the Cattle Trading Capital.'),
         'hero_image': get_content('hero_image_path', url_for('static', filename='images/municipal.jpg')),
+        'hero_cta_video_path': get_content('hero_cta_video_path', ''), # Added for CTA pop-out video
         'about_title': get_content('about_title', 'Where Tradition Meets Progress'),
         'about_text': get_content('about_text', 'Known as the Cattle Trading Capital of the Philippines, Padre Garcia is a thriving municipality in Batangas.'),
         'about_image': get_content('about_image_path', url_for('static', filename='images/municipal2.jpg')),
         'travel_title_1': get_content('travel_title_1', 'Best Time to Visit'),
         'travel_text_1': get_content('travel_text_1', 'December 1st marks our annual Kabakahan Festival.'),
+        'travel_link_1': get_content('travel_link_1', ''),
         'travel_title_2': get_content('travel_title_2', 'Getting Here'),
         'travel_text_2': get_content('travel_text_2', 'Accessible via STAR Tollway (Lipa Exit) and major bus lines.'),
+        'travel_link_2': get_content('travel_link_2', ''),
         'travel_title_3': get_content('travel_title_3', 'Where to Stay'),
         'travel_text_3': get_content('travel_text_3', 'We have local inns and resorts within the town proper.'),
+        'travel_link_3': get_content('travel_link_3', ''),
     })
     page = request.args.get('page', 1, type=int)
     spots = TouristSpot.query.order_by(TouristSpot.order).paginate(page=page, per_page=8, error_out=False)
@@ -275,7 +281,8 @@ def global_search():
             'Kabakahan Festival': {'url': url_for('views.festival'), 'icon': 'ri-flag-line', 'desc': 'Annual cultural celebration of the Cattle Trading Capital.', 'keywords': ['festival', 'kabakahan', 'event', 'december', 'rodeo', 'celebration']},
             'Food & Delicacies': {'url': url_for('views.food'), 'icon': 'ri-restaurant-line', 'desc': 'Taste Batangas Goto, Halo-Halo, and sweet pasalubongs.', 'keywords': ['food', 'goto', 'halo-halo', 'sweet', 'pasalubong', 'delicacy', 'eat', 'taste', 'gastronomic']},
             'Contact Us': {'url': url_for('views.contacts'), 'icon': 'ri-contacts-book-line', 'desc': 'Get in touch with the Tourism Department.', 'keywords': ['contact', 'email', 'phone', 'location', 'address', 'map', 'message']},
-            'Legislative Records': {'url': url_for('views.ordinances'), 'icon': 'ri-file-list-3-line', 'desc': 'Official repository of Municipal Ordinances.', 'keywords': ['ordinance', 'law', 'legal', 'resolution', 'record', 'document']}
+            'Legislative Records': {'url': url_for('views.ordinances'), 'icon': 'ri-file-list-3-line', 'desc': 'Official repository of Municipal Ordinances.', 'keywords': ['ordinance', 'law', 'legal', 'resolution', 'record', 'document']},
+            'Citizen\'s Charter': {'url': url_for('views.charter'), 'icon': 'ri-shield-user-line', 'desc': 'Official service standards, procedures, and processing times of the MTCAO.', 'keywords': ['charter', 'citizens', 'services', 'endorsement', 'accreditation', 'lgu support', 'tour', 'benchmarking', 'historical data', 'processing time', 'fees']}
         }
         
         q_lower = q.lower()
@@ -312,6 +319,7 @@ def about():
         'about_title': get_content('about_title', 'Where Tradition Meets Progress'),
         'about_text': get_content('about_text', 'Known as the Cattle Trading Capital of the Philippines...'),
         'about_image': get_content('about_image_path', url_for('static', filename='images/municipal2.jpg')),
+        'about_chart_path': get_content('about_chart_path', ''), # Added for the Chart
         'about_img_caption': get_content('about_img_caption', '"A community bound by faith, hard work, and unity."'),
         'about_feat1_title': get_content('about_feat1_title', 'Rich History'),
         'about_feat1_desc': get_content('about_feat1_desc', 'Established 1949'),
@@ -322,9 +330,13 @@ def about():
         'mission_text': get_content('mission_text', 'To provide high-quality public service...'),
         'vision_text': get_content('vision_text', 'Padre Garcia shall be the premier agro-industrial center...'),
         'fact_year': get_content('fact_year', '1949'),
+        'fact_year_link': get_content('fact_year_link', ''),
         'fact_barangays': get_content('fact_barangays', '18'),
+        'fact_barangays_link': get_content('fact_barangays_link', ''),
         'fact_population': get_content('fact_population', '50k+'),
+        'fact_population_link': get_content('fact_population_link', ''),
         'fact_festival': get_content('fact_festival', 'Dec 1'),
+        'fact_festival_link': get_content('fact_festival_link', ''),
         'about_cta_title': get_content('about_cta_title', 'Experience the Warmth of Padre Garcia'),
         'about_cta_text': get_content('about_cta_text', 'Whether you are here for business, cattle trading, or leisure, our town welcomes you with open arms.'),
     })
@@ -635,6 +647,219 @@ def manage_users():
     users = User.query.all()
     return render_template("manage_users.html", users=users)
 
+# ==========================================
+#         CITIZEN'S CHARTER ROUTES
+# ==========================================
+
+@views.route("/charter")
+def charter():
+    content = get_common_content()
+    defaults = {
+        'charter_hero_title': "Citizen's Charter",
+        'charter_hero_sub': "Municipal Tourism, Culture, and Arts Office",
+        'charter_hero_desc': "Our commitment to efficient, transparent, and accountable public service standards.",
+        'charter_hero_bg': url_for('static', filename='images/municipal.jpg')
+    }
+    for k, v in defaults.items():
+        content[k] = get_content(k, v)
+        
+    services = CharterService.query.order_by(CharterService.service_number.asc()).all()
+    return render_template("charter.html", content=content, services=services)
+
+@views.route("/edit-charter", methods=["GET", "POST"])
+@login_required
+def edit_charter():
+    if not current_user.is_admin: 
+        return redirect(url_for("views.home"))
+
+    if request.method == "POST":
+        # --- 1. UPDATE SERVICE META INFORMATION ---
+        if "update_service_meta" in request.form:
+            service_id = request.form.get("service_id")
+            service = CharterService.query.get_or_404(service_id)
+            
+            service.title = request.form.get("title")
+            service.description = request.form.get("description")
+            service.office_division = request.form.get("office_division")
+            service.classification = request.form.get("classification")
+            service.transaction_type = request.form.get("transaction_type")
+            service.who_may_avail = request.form.get("who_may_avail")
+            service.total_processing_time = request.form.get("total_processing_time") # Added
+            
+            db.session.commit()
+            flash(f"Meta details for service '{service.title}' updated successfully!", "success")
+            return redirect(url_for("views.edit_charter", active_service=service.id))
+
+        # --- 2. ADD REQUIREMENT ---
+        if "add_requirement" in request.form:
+            service_id = request.form.get("service_id")
+            req_text = request.form.get("requirement")
+            where_sec = request.form.get("where_to_secure")
+            
+            if req_text:
+                new_req = CharterRequirement(
+                    service_id=service_id,
+                    requirement=req_text,
+                    where_to_secure=where_sec
+                )
+                db.session.add(new_req)
+                db.session.commit()
+                flash("Requirement added successfully!", "success")
+            return redirect(url_for("views.edit_charter", active_service=service_id))
+
+        # --- 3. DELETE REQUIREMENT ---
+        if "delete_requirement" in request.form:
+            req_id = request.form.get("req_id")
+            service_id = request.form.get("service_id")
+            req = CharterRequirement.query.get(req_id)
+            if req:
+                db.session.delete(req)
+                db.session.commit()
+                flash("Requirement removed from checklist.", "success")
+            return redirect(url_for("views.edit_charter", active_service=service_id))
+
+        # --- 4. ADD STEP ---
+        if "add_step" in request.form:
+            service_id = request.form.get("service_id")
+            client_step = request.form.get("client_step")
+            action = request.form.get("agency_action")
+            fees = request.form.get("fees_to_pay", "None")
+            time_val = request.form.get("processing_time")
+            responsible = request.form.get("person_responsible")
+            
+            # Auto calculate step order
+            existing_steps_count = CharterStep.query.filter_by(service_id=service_id).count()
+            
+            if client_step:
+                new_step = CharterStep(
+                    service_id=service_id,
+                    step_number=existing_steps_count + 1,
+                    client_step=client_step,
+                    agency_action=action,
+                    fees_to_pay=fees,
+                    processing_time=time_val,
+                    person_responsible=responsible
+                )
+                db.session.add(new_step)
+                db.session.commit()
+                flash("New processing step added!", "success")
+            return redirect(url_for("views.edit_charter", active_service=service_id))
+
+        # --- 5. EDIT STEP ---
+        if "edit_step" in request.form:
+            step_id = request.form.get("step_id")
+            step = CharterStep.query.get_or_404(step_id)
+            
+            step.client_step = request.form.get("client_step")
+            step.agency_action = request.form.get("agency_action")
+            step.fees_to_pay = request.form.get("fees_to_pay")
+            step.processing_time = request.form.get("processing_time")
+            step.person_responsible = request.form.get("person_responsible")
+            step.step_number = int(request.form.get("step_number", step.step_number))
+            
+            db.session.commit()
+            flash("Step details updated successfully!", "success")
+            return redirect(url_for("views.edit_charter", active_service=step.service_id))
+
+        # --- 6. DELETE STEP ---
+        if "delete_step" in request.form:
+            step_id = request.form.get("step_id")
+            step = CharterStep.query.get(step_id)
+            if step:
+                s_id = step.service_id
+                db.session.delete(step)
+                db.session.commit()
+                
+                # Re-index step numbers
+                remaining_steps = CharterStep.query.filter_by(service_id=s_id).order_by(CharterStep.step_number.asc()).all()
+                for i, r_step in enumerate(remaining_steps):
+                    r_step.step_number = i + 1
+                db.session.commit()
+                
+                flash("Step deleted.", "success")
+            return redirect(url_for("views.edit_charter", active_service=s_id))
+
+    # GET Request logic
+    services = CharterService.query.order_by(CharterService.service_number.asc()).all()
+    active_service_id = request.args.get("active_service", type=int)
+    
+    selected_service = None
+    if active_service_id:
+        selected_service = CharterService.query.get(active_service_id)
+    if not selected_service and services:
+        selected_service = services[0]
+
+    return render_template("edit_charter.html", services=services, selected_service=selected_service)
+
+# --- PUBLIC EVENTS ROUTE ---
+@views.route("/events")
+def events():
+    content = get_common_content()
+    # Ensure current date is handled
+    today = datetime.datetime.now().date()
+    all_events = Event.query.order_by(Event.date.asc()).all()
+    return render_template("events.html", content=content, events=all_events, today=today)
+
+# --- ADMIN EVENTS EDITOR ROUTE ---
+@views.route("/edit-events", methods=["GET", "POST"])
+@login_required
+def edit_events():
+    if not current_user.is_admin: return redirect(url_for("views.home"))
+    
+    if request.method == "POST":
+        # Checkbox logic: if it's in request.form, it's True, else False
+        show_date_val = True if request.form.get("show_date") else False
+
+        # ADD EVENT
+        if "add_event" in request.form:
+            date_str = request.form.get("date")
+            date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
+            
+            new_event = Event(
+                title=request.form.get("title"),
+                date=date_obj,
+                show_date=show_date_val, # Handle new field
+                description=request.form.get("desc"),
+                location=request.form.get("loc"),
+                image_url=save_file(request.files.get("img"))
+            )
+            db.session.add(new_event)
+            db.session.commit()
+            flash("Event added successfully!", "success")
+            return redirect(url_for("views.edit_events"))
+            
+        # EDIT EVENT
+        if "edit_event" in request.form:
+            ev = Event.query.get(request.form.get("id"))
+            if ev:
+                ev.title = request.form.get("title")
+                ev.location = request.form.get("loc")
+                ev.description = request.form.get("desc")
+                ev.show_date = show_date_val # Update new field
+                
+                date_str = request.form.get("date")
+                ev.date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
+                
+                img_file = request.files.get("img")
+                if img_file and img_file.filename != '':
+                    ev.image_url = save_file(img_file)
+                    
+                db.session.commit()
+                flash("Event updated successfully!", "success")
+            return redirect(url_for("views.edit_events"))
+
+        # DELETE EVENT
+        if "delete_event" in request.form:
+            ev = Event.query.get(request.form.get("id"))
+            if ev:
+                db.session.delete(ev)
+                db.session.commit()
+                flash("Event deleted.", "success")
+            return redirect(url_for("views.edit_events"))
+            
+    events = Event.query.order_by(Event.date.asc()).all()
+    return render_template("edit_events.html", events=events)
+
 @views.route("/history")
 def history():
     content = get_common_content()
@@ -646,6 +871,7 @@ def history():
 
     # --- NEW: Fetch media for the 'Extra Information Section' ---
     extra_info_media = HistoryMedia.query.filter_by(section_key='history_extra_info').order_by(HistoryMedia.order).all()
+    building_images = BuildingImage.query.order_by(BuildingImage.id.asc()).all()
 
     biography_text = """An eminent Filipino Batangueño Priest – Hero, Padre Vicente Teodoro Garcia was named after St. Vincent Ferrer by his beloved parents Don Jose Garcia and Doña Andrea Teodora of barrio Maugat, then Old Rosario (1687) now this Municipality of Padre V. Garcia (1949), Province of Batangas, Philippines.
 
@@ -703,24 +929,24 @@ On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring 
                            mayors=mayors, 
                            barangays=barangays, 
                            pg_media=pg_media,
-                           extra_info_media=extra_info_media)
+                           extra_info_media=extra_info_media,
+                           building_images=building_images)
 
 @views.route("/commercial")
 def commercial():
     content = get_common_content()
     
-    page = request.args.get('page', 1, type=int)
-    establishments = CommercialEstablishment.query.order_by(CommercialEstablishment.id.desc()).paginate(page=page, per_page=6, error_out=False)
-    
-    page_stay = request.args.get('page_stay', 1, type=int)
-    accommodations = Accommodation.query.order_by(Accommodation.id.desc()).paginate(page=page_stay, per_page=6, error_out=False)
-    
+    establishments = CommercialEstablishment.query.order_by(CommercialEstablishment.id.desc()).all()
+    accommodations = Accommodation.query.order_by(Accommodation.id.desc()).all()
+    department_stores = DepartmentStore.query.order_by(DepartmentStore.id.desc()).all()
+    facilities = Facility.query.order_by(Facility.id.desc()).all()
     banks = FinancialInstitution.query.all()
+    cultural_props = CulturalProperty.query.order_by(CulturalProperty.id.desc()).all()
     
     defaults = {
         'comm_hero_title': 'Commerce & Lifestyle', 
         'comm_hero_sub': 'Business & Leisure', 
-        'comm_hero_desc': 'A growing agro-industrial hub teeming with opportunities and vibrant local life.', 
+        'comm_hero_desc': 'A growing agro-industrial hub...', 
         'comm_hero_bg': url_for('static', filename='images/commerce_hero.jpg'),
         'comm_intro_title': 'A Thriving Economy', 
         'comm_intro_text': 'Beyond the cattle market...',
@@ -733,14 +959,54 @@ def commercial():
         'comm_shop_li3': 'Agricultural Supplies',
         'comm_dine_title': 'Featured Establishments', 
         'comm_stay_title': 'Stay & Relax', 
-        'comm_stay_head': 'Resorts & Inns', 'comm_stay_text': 'Padre Garcia offers various accommodations...', 
+        'comm_stay_head': 'Resorts & Inns', 
+        'comm_stay_text': 'Padre Garcia offers various accommodations...', 
         'comm_fin_title': 'Financial Infrastructure', 
-        'comm_fin_text': 'To support the high volume of trade, we have a robust banking system.'
+        'comm_fin_text': 'To support the high volume of trade, we have a robust banking system.',
+        'comm_fac_title': 'Public Facilities', 
+        'comm_fac_sub': 'Our Infrastructure', 
+        'comm_fac_desc': 'Essential amenities.',
+        'comm_dept_title': 'Department Stores', 
+        'comm_dept_head': 'Shopping & Retail', 
+        'comm_dept_text': 'Explore major retail centers.',
+        'comm_cult_title': 'Cultural Properties', 
+        'comm_cult_sub': 'Our Heritage', 
+        'comm_cult_desc': 'Preserved landmarks.',
+
+        # --- MAP FOOTER KEYS (MUST BE HERE) ---
+        'comm_cuisine_map_title': 'Establishments Map', 'comm_cuisine_map_subtitle': 'Municipality of Padre Garcia',
+        'comm_cuisine_map_note': '', 'comm_cuisine_map_source': '', 'comm_cuisine_map_disclaimer': '',
+
+        'comm_stay_map_title': 'Accommodations Map', 'comm_stay_map_subtitle': 'Municipality of Padre Garcia',
+        'comm_stay_map_note': '', 'comm_stay_map_source': '', 'comm_stay_map_disclaimer': '',
+
+        'comm_dept_map_title': 'Department Stores Map', 'comm_dept_map_subtitle': 'Municipality of Padre Garcia',
+        'comm_dept_map_note': '', 'comm_dept_map_source': '', 'comm_dept_map_disclaimer': '',
+
+        'comm_fac_map_title': 'Public Facilities Map', 'comm_fac_map_subtitle': 'Municipality of Padre Garcia',
+        'comm_fac_map_note': '', 'comm_fac_map_source': '', 'comm_fac_map_disclaimer': '',
+
+        'comm_cult_map_title': 'Cultural Properties Map', 'comm_cult_map_subtitle': 'Municipality of Padre Garcia',
+        'comm_cult_map_note': '', 'comm_cult_map_source': '', 'comm_cult_map_disclaimer': '',
+        
+        # Logos and Insets
+        'attr_map_inset1': url_for('static', filename='images/placeholder.png'),
+        'attr_map_inset2': url_for('static', filename='images/placeholder.png'),
+        'attr_map_logo1': '', 'attr_map_logo2': '', 'attr_map_logo3': '', 'attr_map_logo4': ''
     }
-    for k, v in defaults.items(): content[k] = get_content(k, v)
-    return render_template("commercial.html", content=content, establishments=establishments, accommodations=accommodations, banks=banks)
 
-
+    for k, v in defaults.items(): 
+        content[k] = get_content(k, v)
+    
+    return render_template("commercial.html", 
+                           content=content, 
+                           establishments=establishments, 
+                           accommodations=accommodations, 
+                           department_stores=department_stores, 
+                           banks=banks, 
+                           facilities=facilities, 
+                           cultural_props=cultural_props)
+    
 @views.route("/attractions")
 def attractions():
     content = get_common_content()
@@ -748,12 +1014,21 @@ def attractions():
     
     defaults = {
         'attr_hero_title': 'Major Attractions', 
-        'attr_hero_sub': 'Pride of the Town', 
-        'attr_hero_desc': 'From our economic heart to our natural wonders.', 
-        'attr_hero_bg': url_for('static', filename='images/cattle_market.jpg')
+        'attr_hero_bg': url_for('static', filename='images/cattle_market.jpg'),
+        'attr_map_title': 'TOURIST ATTRACTIONS MAP',
+        'attr_map_municipality': 'MUNICIPALITY OF PADRE GARCIA',
+        'attr_map_province': 'PROVINCE OF BATANGAS',
+        'attr_map_note': 'Note goes here...',
+        'attr_map_source': 'Source goes here...',
+        'attr_map_disclaimer': 'Disclaimer here...',
+        'attr_map_inset1': url_for('static', filename='images/placeholder.png'),
+        'attr_map_inset2': url_for('static', filename='images/placeholder.png'),
+        'attr_map_logo1': url_for('static', filename='images/logo_watermark.png'),
+        'attr_map_logo2': url_for('static', filename='images/pgv.jpg.jpg'),
+        'attr_map_logo3': '', # DOT Logo URL
+        'attr_map_logo4': ''  # Bagong Pilipinas URL
     }
     for k, v in defaults.items(): content[k] = get_content(k, v)
-    
     return render_template("attractions.html", content=content, attractions=attractions_list)
 
 @views.route('/api/attraction/<int:id>/media')
@@ -783,6 +1058,8 @@ def attraction_detail(id):
 @views.route("/culture")
 def culture():
     content = get_common_content()
+    
+    # 1. Defaults for the text and images on the Culture page
     defaults = {
         'cult_hero_title': 'Cultural Inventory', 
         'cult_hero_sub': 'The sacred sites...', 
@@ -803,26 +1080,28 @@ def culture():
         'cult_patron_text': 'The image...',
         'cult_mon_title': 'Historical Monuments', 
         'cult_mon_sub': 'Honoring Pillars',
-        'cult_m1_name': 'Padre Vicente Garcia', 'cult_m1_desc': '...', 'cult_m1_img': '...', 
-        'cult_m1_pos': '50', # <--- ADD THIS (Default to Center)
-        'cult_m2_name': 'Hon. Graciano R. Recto', 'cult_m2_desc': '...', 'cult_m2_img': '...', 
-        'cult_m2_pos': '50', # <--- ADD THIS
-        'cult_m3_name': 'Father Antonio', 'cult_m3_desc': '...', 'cult_m3_img': '...', 
-        'cult_m3_pos': '50'  # <--- ADD THIS
+        'cult_m1_name': 'Padre Vicente Garcia', 'cult_m1_desc': '...', 'cult_m1_img': '', 'cult_m1_pos': '50',
+        'cult_m2_name': 'Hon. Graciano R. Recto', 'cult_m2_desc': '...', 'cult_m2_img': '', 'cult_m2_pos': '50',
+        'cult_m3_name': 'Father Antonio', 'cult_m3_desc': '...', 'cult_m3_img': '', 'cult_m3_pos': '50'
     }
     
-    # This loop actually fetches the saved values from the database
+    # 2. Get values from SiteContent table (or fallback to defaults)
     for k, v in defaults.items(): 
         content[k] = get_content(k, v)
         
-    return render_template("culture.html", content=content)
+    # 3. FETCH THE DOWNLOADABLE FILES
+    # We filter by the section_key 'culture_downloads' to isolate these specific files
+    culture_files = HistoryMedia.query.filter_by(section_key='culture_downloads').all()
+        
+    # 4. Render with both the content (SiteContent) and the list of downloadable files
+    return render_template("culture.html", content=content, culture_files=culture_files)
 
 @views.route("/festival")
 def festival():
     content = get_common_content()
     events = FestivalEvent.query.all() 
-    page = request.args.get('page', 1, type=int)
-    gallery = FestivalGalleryImage.query.order_by(FestivalGalleryImage.id.desc()).paginate(page=page, per_page=4, error_out=False)
+    page = request.args.get('page', 1, type=int)    
+    gallery = FestivalGalleryImage.query.order_by(FestivalGalleryImage.id.desc()).all()
     
     defaults = {
         'fest_hero_bg': url_for('static', filename='images/festival_hero.jpg'), 
@@ -867,6 +1146,8 @@ def ordinances():
     return render_template("ordinances.html", content=content, ordinances=ordinances_list)
 
 @views.route("/contacts", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
+@limiter.limit("100 per hour", methods=["POST"])
 def contacts():
     content = get_common_content()
     defaults = {
@@ -964,20 +1245,33 @@ def edit_home_hero():
                 existing = SiteContent.query.filter_by(key=field).first()
                 if existing: existing.value = val
                 else: db.session.add(SiteContent(key=field, value=val))
+        
+        # Save background media
         file = request.files.get("hero_image_file")
         if file and file.filename != '':
             path = save_file(file)
             existing = SiteContent.query.filter_by(key='hero_image_path').first()
             if existing: existing.value = path
             else: db.session.add(SiteContent(key='hero_image_path', value=path))
+            
+        # Save CTA popup video file
+        file_cta = request.files.get("hero_cta_video_file")
+        if file_cta and file_cta.filename != '':
+            path_cta = save_file(file_cta)
+            existing_cta = SiteContent.query.filter_by(key='hero_cta_video_path').first()
+            if existing_cta: existing_cta.value = path_cta
+            else: db.session.add(SiteContent(key='hero_cta_video_path', value=path_cta))
+        
         db.session.commit()
         flash("Home Hero updated!", "success")
         return redirect(url_for("views.edit_home_hero"))
+    
     content = {
         'hero_title_1': get_content('hero_title_1', 'Padre'),
         'hero_title_2': get_content('hero_title_2', 'Garcia'),
         'hero_subtitle': get_content('hero_subtitle', 'Discover the rich heritage...'),
-        'hero_image_path': get_content('hero_image_path', url_for('static', filename='images/municipal.jpg'))
+        'hero_image': get_content('hero_image_path', url_for('static', filename='images/municipal.jpg')),
+        'hero_cta_video_path': get_content('hero_cta_video_path', '') # Passed to form template
     }
     return render_template("edit_home_hero.html", content=content)
 
@@ -1321,7 +1615,11 @@ def edit_footer():
 def edit_travel():
     if not current_user.is_admin: return redirect(url_for("views.home"))
     if request.method == "POST":
-        fields = ['travel_title_1', 'travel_text_1', 'travel_title_2', 'travel_text_2', 'travel_title_3', 'travel_text_3']
+        fields = [
+            'travel_title_1', 'travel_text_1', 'travel_link_1', 
+            'travel_title_2', 'travel_text_2', 'travel_link_2', 
+            'travel_title_3', 'travel_text_3', 'travel_link_3'
+        ]
         for field in fields:
             val = request.form.get(field)
             if val is not None:
@@ -1334,10 +1632,13 @@ def edit_travel():
     content = {
         'travel_title_1': get_content('travel_title_1', 'Best Time to Visit'),
         'travel_text_1': get_content('travel_text_1', 'December 1st marks our Kabakahan Festival...'),
+        'travel_link_1': get_content('travel_link_1', ''),
         'travel_title_2': get_content('travel_title_2', 'Getting Here'),
         'travel_text_2': get_content('travel_text_2', 'Accessible via STAR Tollway (Lipa Exit)...'),
+        'travel_link_2': get_content('travel_link_2', ''),
         'travel_title_3': get_content('travel_title_3', 'Where to Stay'),
         'travel_text_3': get_content('travel_text_3', 'We have local inns within the town proper...'),
+        'travel_link_3': get_content('travel_link_3', ''),
     }
     return render_template("edit_travel.html", content=content)
 
@@ -1345,7 +1646,9 @@ def edit_travel():
 @login_required
 def edit_about():
     if not current_user.is_admin: return redirect(url_for("views.home"))
+    
     if request.method == "POST":
+        # Handle all text fields
         fields = [
             'about_hero_badge', 'about_hero_h1', 'about_hero_sub',
             'about_intro_badge', 'about_title', 'about_text', 'about_img_caption',
@@ -1353,7 +1656,10 @@ def edit_about():
             'about_feat2_title', 'about_feat2_desc',
             'about_dir_title', 'about_dir_sub',
             'mission_text', 'vision_text',
-            'fact_year', 'fact_barangays', 'fact_population', 'fact_festival',
+            'fact_year', 'fact_year_link', 
+            'fact_barangays', 'fact_barangays_link', 
+            'fact_population', 'fact_population_link', 
+            'fact_festival', 'fact_festival_link',
             'about_cta_title', 'about_cta_text'
         ]
         for field in fields:
@@ -1362,23 +1668,39 @@ def edit_about():
                 existing = SiteContent.query.filter_by(key=field).first()
                 if existing: existing.value = val
                 else: db.session.add(SiteContent(key=field, value=val))
+        
+        # Handle Main Featured Image
         file = request.files.get("about_image_file")
         if file and file.filename != '':
             path = save_file(file)
             existing = SiteContent.query.filter_by(key='about_image_path').first()
             if existing: existing.value = path
             else: db.session.add(SiteContent(key='about_image_path', value=path))
+
+        # Handle Tourism Arrivals Chart Image (NEW)
+        chart_file = request.files.get("about_chart_file")
+        if chart_file and chart_file.filename != '':
+            chart_path = save_file(chart_file)
+            existing_chart = SiteContent.query.filter_by(key='about_chart_path').first()
+            if existing_chart: 
+                existing_chart.value = chart_path
+            else: 
+                db.session.add(SiteContent(key='about_chart_path', value=chart_path))
+
         db.session.commit()
-        flash("About Page updated!", "success")
+        flash("About Page updated successfully!", "success")
         return redirect(url_for("views.edit_about"))
+
+    # GET Request: Load current data
     content = {
         'about_hero_badge': get_content('about_hero_badge', 'Welcome to Our Town'),
         'about_hero_h1': get_content('about_hero_h1', 'Our Story & Heritage'),
-        'about_hero_sub': get_content('about_hero_sub', 'Discover the history, culture, and vision behind the Cattle Trading Capital.'),
+        'about_hero_sub': get_content('about_hero_sub', 'Discover the history, culture, and vision...'),
         'about_intro_badge': get_content('about_intro_badge', 'About Padre Garcia'),
         'about_title': get_content('about_title', 'Where Tradition Meets Progress'),
         'about_text': get_content('about_text', 'Known as the Cattle Trading Capital...'),
         'about_image_path': get_content('about_image_path', url_for('static', filename='images/municipal2.jpg')),
+        'about_chart_path': get_content('about_chart_path', ''), # Added for the Chart
         'about_img_caption': get_content('about_img_caption', '"A community bound by faith, hard work, and unity."'),
         'about_feat1_title': get_content('about_feat1_title', 'Rich History'),
         'about_feat1_desc': get_content('about_feat1_desc', 'Established 1949'),
@@ -1389,11 +1711,15 @@ def edit_about():
         'mission_text': get_content('mission_text', 'To provide high-quality public service...'),
         'vision_text': get_content('vision_text', 'Padre Garcia shall be the premier agro-industrial...'),
         'fact_year': get_content('fact_year', '1949'),
+        'fact_year_link': get_content('fact_year_link', ''),
         'fact_barangays': get_content('fact_barangays', '18'),
+        'fact_barangays_link': get_content('fact_barangays_link', ''),
         'fact_population': get_content('fact_population', '50k+'),
+        'fact_population_link': get_content('fact_population_link', ''),
         'fact_festival': get_content('fact_festival', 'Dec 1'),
+        'fact_festival_link': get_content('fact_festival_link', ''),
         'about_cta_title': get_content('about_cta_title', 'Experience the Warmth of Padre Garcia'),
-        'about_cta_text': get_content('about_cta_text', 'Whether you are here for business, cattle trading, or leisure...'),
+        'about_cta_text': get_content('about_cta_text', 'Whether you are here for business, cattle trading...'),
     }
     return render_template("about_us_edit.html", content=content)
 
@@ -1466,10 +1792,15 @@ On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring 
         # --- Handle Barangay Forms ---
         if "add_barangay" in request.form:
             name = request.form.get("brgy_name")
+            lat_val = request.form.get("brgy_lat")
+            lng_val = request.form.get("brgy_lng")
+            
             new_brgy = Barangay(
                 name=name,
                 captain_name=request.form.get("brgy_captain"),
                 map_url=request.form.get("brgy_map"),
+                lat=float(lat_val) if lat_val else None,
+                lng=float(lng_val) if lng_val else None,
                 captain_image=save_file(request.files.get("brgy_img")) if request.files.get("brgy_img") else None
             )
             db.session.add(new_brgy)
@@ -1482,13 +1813,19 @@ On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring 
             brgy.name = request.form.get("brgy_name")
             brgy.captain_name = request.form.get("brgy_captain")
             brgy.map_url = request.form.get("brgy_map")
+            
+            lat_val = request.form.get("brgy_lat")
+            lng_val = request.form.get("brgy_lng")
+            brgy.lat = float(lat_val) if lat_val else None
+            brgy.lng = float(lng_val) if lng_val else None
+
             file = request.files.get("brgy_img")
             if file and file.filename != '':
                 brgy.captain_image = save_file(file)
             db.session.commit()
             flash(f"Updated {brgy.name}!", "success")
             return redirect(url_for("views.edit_history"))
-
+        
         if "delete_barangay" in request.form:
             brgy = Barangay.query.get_or_404(request.form.get("brgy_id"))
             db.session.delete(brgy)
@@ -1524,6 +1861,39 @@ On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring 
             db.session.delete(media_item)
             db.session.commit()
             flash("Media item deleted.", "success")
+            return redirect(url_for("views.edit_history"))
+        
+        if "add_building_img" in request.form:
+            file = request.files.get("building_img")
+            label = request.form.get("b_label")
+            desc = request.form.get("b_desc")
+            if file and file.filename != '':
+                path = save_file(file)
+                new_b = BuildingImage(label=label, description=desc, image_url=path)
+                db.session.add(new_b)
+                db.session.commit()
+                flash("Carousel item added!", "success")
+            return redirect(url_for("views.edit_history"))
+        
+        if "edit_building_img" in request.form:
+            b_id = request.form.get("b_id")
+            building = BuildingImage.query.get_or_404(b_id)
+            building.label = request.form.get("b_label")
+            building.description = request.form.get("b_desc")
+            
+            file = request.files.get("building_img")
+            if file and file.filename != '':
+                building.image_url = save_file(file)
+                
+            db.session.commit()
+            flash("Building details updated!", "success")
+            return redirect(url_for("views.edit_history"))
+
+        if "delete_building_img" in request.form:
+            b = BuildingImage.query.get_or_404(request.form.get("b_id"))
+            db.session.delete(b)
+            db.session.commit()
+            flash("Removed from carousel.", "success")
             return redirect(url_for("views.edit_history"))
 
         # --- Handle Main Static Content (Save All Changes Button) ---
@@ -1568,6 +1938,7 @@ On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring 
     barangays_list = Barangay.query.order_by(Barangay.name).all()
     pg_media = HistoryMedia.query.filter_by(section_key='padre_garcia').order_by(HistoryMedia.id.desc()).all()
     extra_info_media = HistoryMedia.query.filter_by(section_key='history_extra_info').order_by(HistoryMedia.id.desc()).all()
+    building_images = BuildingImage.query.order_by(BuildingImage.id.asc()).all()
 
     defaults = {
         'hist_hero_title': 'History & Heritage', 'hist_hero_sub': 'From Lumang Bayan to Today',
@@ -1589,83 +1960,158 @@ On August 7, 2017, the Sangguniang Bayan passed Ordinance No. 25-2017 declaring 
     content = {}
     for k, v in defaults.items(): content[k] = get_content(k, v)
     
-    return render_template("edit_history.html", content=content, mayors=mayors_list, barangays=barangays_list, pg_media=pg_media, extra_info_media=extra_info_media)
+    return render_template("edit_history.html", content=content, mayors=mayors_list, barangays=barangays_list, pg_media=pg_media, extra_info_media=extra_info_media, building_images=building_images)
 
 @views.route("/edit-commerce", methods=["GET", "POST"])
 @login_required
 def edit_commerce():
-    if not current_user.is_admin: return redirect(url_for("views.home"))
+    if not current_user.is_admin: 
+        return redirect(url_for("views.home"))
     
     if request.method == "POST":
-        
+        # Handle Dynamic Data (Establishments, Accs, Dept, Banks, Fac, Cult)
         if "add_est" in request.form:
-            new_est = CommercialEstablishment(name=request.form.get("est_name"), description=request.form.get("est_desc"), map_url=request.form.get("est_map"), image_url=save_file(request.files.get("est_img")) if request.files.get("est_img") else None)
+            new_est = CommercialEstablishment(
+                name=request.form.get("est_name"), 
+                description=request.form.get("est_desc"), 
+                map_url=request.form.get("est_map"),
+                lat=float(request.form.get("est_lat")) if request.form.get("est_lat") else None,
+                lng=float(request.form.get("est_lng")) if request.form.get("est_lng") else None,
+                image_url=save_file(request.files.get("est_img")) if request.files.get("est_img") else None
+            )
             db.session.add(new_est)
             db.session.commit()
-            flash("Establishment added successfully!", "success")
+            flash("Establishment added!", "success")
             return redirect(url_for("views.edit_commerce"))
 
         if "edit_est" in request.form:
             est = CommercialEstablishment.query.get(request.form.get("est_id"))
             if est:
                 est.name, est.description, est.map_url = request.form.get("est_name"), request.form.get("est_desc"), request.form.get("est_map")
-                if request.files.get("est_img") and request.files.get("est_img").filename != '': est.image_url = save_file(request.files.get("est_img"))
+                est.lat = float(request.form.get("est_lat")) if request.form.get("est_lat") else None
+                est.lng = float(request.form.get("est_lng")) if request.form.get("est_lng") else None
+                if request.files.get("est_img") and request.files.get("est_img").filename != '': 
+                    est.image_url = save_file(request.files.get("est_img"))
                 db.session.commit()
                 flash("Establishment updated!", "success")
             return redirect(url_for("views.edit_commerce"))
 
         if "delete_est" in request.form:
             est = CommercialEstablishment.query.get(request.form.get("est_id"))
-            if est:
-                db.session.delete(est)
-                db.session.commit()
+            if est: db.session.delete(est); db.session.commit()
             return redirect(url_for("views.edit_commerce"))
 
         if "add_acc" in request.form:
-            new_acc = Accommodation(name=request.form.get("acc_name"), description=request.form.get("acc_desc"), map_url=request.form.get("acc_map"), image_url=save_file(request.files.get("acc_img")) if request.files.get("acc_img") else None)
-            db.session.add(new_acc)
-            db.session.commit()
-            flash("Accommodation added successfully!", "success")
+            new_acc = Accommodation(
+                name=request.form.get("acc_name"), description=request.form.get("acc_desc"), map_url=request.form.get("acc_map"),
+                lat=float(request.form.get("acc_lat")) if request.form.get("acc_lat") else None,
+                lng=float(request.form.get("acc_lng")) if request.form.get("acc_lng") else None,
+                image_url=save_file(request.files.get("acc_img")) if request.files.get("acc_img") else None
+            )
+            db.session.add(new_acc); db.session.commit(); flash("Accommodation added!", "success")
             return redirect(url_for("views.edit_commerce"))
 
         if "edit_acc" in request.form:
             acc = Accommodation.query.get(request.form.get("acc_id"))
             if acc:
                 acc.name, acc.description, acc.map_url = request.form.get("acc_name"), request.form.get("acc_desc"), request.form.get("acc_map")
+                acc.lat, acc.lng = float(request.form.get("acc_lat")) if request.form.get("acc_lat") else None, float(request.form.get("acc_lng")) if request.form.get("acc_lng") else None
                 if request.files.get("acc_img") and request.files.get("acc_img").filename != '': acc.image_url = save_file(request.files.get("acc_img"))
-                db.session.commit()
-                flash("Accommodation updated!", "success")
+                db.session.commit(); flash("Accommodation updated!", "success")
             return redirect(url_for("views.edit_commerce"))
 
         if "delete_acc" in request.form:
             acc = Accommodation.query.get(request.form.get("acc_id"))
-            if acc:
-                db.session.delete(acc)
-                db.session.commit()
+            if acc: db.session.delete(acc); db.session.commit()
+            return redirect(url_for("views.edit_commerce"))
+
+        if "add_dept" in request.form:
+            new_dept = DepartmentStore(
+                name=request.form.get("dept_name"), description=request.form.get("dept_desc"), map_url=request.form.get("dept_map"),
+                lat=float(request.form.get("dept_lat")) if request.form.get("dept_lat") else None,
+                lng=float(request.form.get("dept_lng")) if request.form.get("dept_lng") else None,
+                image_url=save_file(request.files.get("dept_img")) if request.files.get("dept_img") else None
+            )
+            db.session.add(new_dept); db.session.commit(); flash("Department Store added!", "success")
+            return redirect(url_for("views.edit_commerce"))
+
+        if "edit_dept" in request.form:
+            dept = DepartmentStore.query.get(request.form.get("dept_id"))
+            if dept:
+                dept.name, dept.description, dept.map_url = request.form.get("dept_name"), request.form.get("dept_desc"), request.form.get("dept_map")
+                dept.lat, dept.lng = float(request.form.get("dept_lat")) if request.form.get("dept_lat") else None, float(request.form.get("dept_lng")) if request.form.get("dept_lng") else None
+                if request.files.get("dept_img") and request.files.get("dept_img").filename != '': dept.image_url = save_file(request.files.get("dept_img"))
+                db.session.commit(); flash("Department Store updated!", "success")
+            return redirect(url_for("views.edit_commerce"))
+
+        if "delete_dept" in request.form:
+            dept = DepartmentStore.query.get(request.form.get("dept_id"))
+            if dept: db.session.delete(dept); db.session.commit()
             return redirect(url_for("views.edit_commerce"))
 
         if "add_bank" in request.form:
-            new_bank = FinancialInstitution(name=request.form.get("bank_name"), url=request.form.get("bank_url"))
-            db.session.add(new_bank)
-            db.session.commit()
-            flash("Financial Institution added!", "success")
+            db.session.add(FinancialInstitution(name=request.form.get("bank_name"), url=request.form.get("bank_url"))); db.session.commit(); flash("Institution added!", "success")
             return redirect(url_for("views.edit_commerce"))
 
         if "edit_bank" in request.form:
             bank = FinancialInstitution.query.get(request.form.get("bank_id"))
-            if bank:
-                bank.name, bank.url = request.form.get("bank_name"), request.form.get("bank_url")
-                db.session.commit()
-                flash("Institution updated!", "success")
+            if bank: bank.name, bank.url = request.form.get("bank_name"), request.form.get("bank_url"); db.session.commit(); flash("Institution updated!", "success")
             return redirect(url_for("views.edit_commerce"))
 
         if "delete_bank" in request.form:
             bank = FinancialInstitution.query.get(request.form.get("bank_id"))
-            if bank:
-                db.session.delete(bank)
-                db.session.commit()
+            if bank: db.session.delete(bank); db.session.commit()
             return redirect(url_for("views.edit_commerce"))
 
+        if "add_facility" in request.form:
+            new_fac = Facility(
+                name=request.form.get("name"), description=request.form.get("description"), category=request.form.get("category"), map_url=request.form.get("map_url"),
+                lat=float(request.form.get("fac_lat")) if request.form.get("fac_lat") else None,
+                lng=float(request.form.get("fac_lng")) if request.form.get("fac_lng") else None,
+                image_url=save_file(request.files.get("img")) if request.files.get("img") else None
+            )
+            db.session.add(new_fac); db.session.commit(); flash("Facility added!", "success")
+            return redirect(url_for("views.edit_commerce"))
+
+        if "edit_facility" in request.form:
+            fac = Facility.query.get(request.form.get("fac_id"))
+            if fac:
+                fac.name, fac.description, fac.category, fac.map_url = request.form.get("name"), request.form.get("description"), request.form.get("category"), request.form.get("map_url")
+                fac.lat, fac.lng = float(request.form.get("fac_lat")) if request.form.get("fac_lat") else None, float(request.form.get("fac_lng")) if request.form.get("fac_lng") else None
+                if request.files.get("img") and request.files.get("img").filename != '': fac.image_url = save_file(request.files.get("img"))
+                db.session.commit(); flash("Facility updated!", "success")
+            return redirect(url_for("views.edit_commerce"))
+
+        if "delete_facility" in request.form:
+            fac = Facility.query.get(request.form.get("fac_id"))
+            if fac: db.session.delete(fac); db.session.commit(); flash("Facility deleted.", "success")
+            return redirect(url_for("views.edit_commerce"))
+
+        if "add_cult" in request.form:
+            new_cp = CulturalProperty(
+                name=request.form.get("cult_name"), description=request.form.get("cult_desc"), map_url=request.form.get("cult_map"),
+                lat=float(request.form.get("cult_lat")) if request.form.get("cult_lat") else None,
+                lng=float(request.form.get("cult_lng")) if request.form.get("cult_lng") else None,
+                image_url=save_file(request.files.get("cult_img")) if request.files.get("cult_img") else None
+            )
+            db.session.add(new_cp); db.session.commit(); flash("Cultural Property added!", "success")
+            return redirect(url_for("views.edit_commerce"))
+
+        if "edit_cult" in request.form:
+            cp = CulturalProperty.query.get(request.form.get("cult_id"))
+            if cp:
+                cp.name, cp.description, cp.map_url = request.form.get("cult_name"), request.form.get("cult_desc"), request.form.get("cult_map")
+                cp.lat, cp.lng = float(request.form.get("cult_lat")) if request.form.get("cult_lat") else None, float(request.form.get("cult_lng")) if request.form.get("cult_lng") else None
+                if request.files.get("cult_img") and request.files.get("cult_img").filename != '': cp.image_url = save_file(request.files.get("cult_img"))
+                db.session.commit(); flash("Cultural Property updated!", "success")
+            return redirect(url_for("views.edit_commerce"))
+
+        if "delete_cult" in request.form:
+            cp = CulturalProperty.query.get(request.form.get("cult_id"))
+            if cp: db.session.delete(cp); db.session.commit(); flash("Cultural Property removed.", "success")
+            return redirect(url_for("views.edit_commerce"))
+
+        # --- Handle Static Content (Global Save Button) ---
         fields = [
             'comm_hero_title', 'comm_hero_sub', 'comm_hero_desc',
             'comm_intro_title', 'comm_intro_text',
@@ -1673,7 +2119,31 @@ def edit_commerce():
             'comm_shop_li1', 'comm_shop_li2', 'comm_shop_li3',
             'comm_dine_title',
             'comm_stay_title', 'comm_stay_head', 'comm_stay_text',
-            'comm_fin_title', 'comm_fin_text'
+            'comm_fin_title', 'comm_fin_text',
+            'comm_fac_title', 'comm_fac_sub', 'comm_fac_desc',
+            'comm_dept_title', 'comm_dept_head', 'comm_dept_text',
+            'comm_cult_title', 'comm_cult_sub', 'comm_cult_desc',
+            
+            # --- MAP FOOTER TITLE & SUBTITLE ---
+            'comm_cuisine_map_title', 'comm_cuisine_map_subtitle',
+            'comm_stay_map_title', 'comm_stay_map_subtitle',
+            'comm_dept_map_title', 'comm_dept_map_subtitle',
+            'comm_fac_map_title', 'comm_fac_map_subtitle',
+            'comm_cult_map_title', 'comm_cult_map_subtitle',
+
+            # --- MAP FOOTER NOTES & SOURCES ---
+            'comm_cuisine_map_note', 'comm_cuisine_map_source',
+            'comm_stay_map_note', 'comm_stay_map_source',
+            'comm_dept_map_note', 'comm_dept_map_source',
+            'comm_fac_map_note', 'comm_fac_map_source',
+            'comm_cult_map_note', 'comm_cult_map_source',
+
+            # --- THE MISSING DISCLAIMERS ---
+            'comm_cuisine_map_disclaimer',
+            'comm_stay_map_disclaimer',
+            'comm_dept_map_disclaimer',
+            'comm_fac_map_disclaimer',
+            'comm_cult_map_disclaimer'
         ]
         for field in fields:
             val = request.form.get(field)
@@ -1681,7 +2151,7 @@ def edit_commerce():
                 existing = SiteContent.query.filter_by(key=field).first()
                 if existing: existing.value = val
                 else: db.session.add(SiteContent(key=field, value=val))
-                
+        
         img_fields = ['comm_hero_bg', 'comm_shop_img']
         for field in img_fields:
             file = request.files.get(field + "_file")
@@ -1691,36 +2161,56 @@ def edit_commerce():
                 if existing: existing.value = path
                 else: db.session.add(SiteContent(key=field, value=path))
                 
-        db.session.commit()
-        flash("Commerce Page static content updated!", "success")
+        db.session.commit(); flash("Page content updated!", "success")
         return redirect(url_for("views.edit_commerce"))
 
+    # GET Request
     defaults = {
         'comm_hero_title': 'Commerce & Lifestyle', 'comm_hero_sub': 'Business & Leisure', 'comm_hero_desc': 'A growing agro-industrial hub...', 
         'comm_hero_bg': url_for('static', filename='images/commerce_hero.jpg'),
         'comm_intro_title': 'A Thriving Economy', 'comm_intro_text': 'Beyond the cattle market...',
         'comm_shop_title': 'Shopping & Markets', 'comm_shop_head': 'Padre Garcia Public Market', 'comm_shop_text': 'The daily heartbeat of the town...', 'comm_shop_img': url_for('static', filename='images/public_market.jpg'),
         'comm_shop_li1': 'Fresh Fruits & Vegetables', 'comm_shop_li2': 'Clothing & Dry Goods', 'comm_shop_li3': 'Agricultural Supplies',
-        'comm_dine_title': 'Featured Establishments',
-        'comm_stay_title': 'Stay & Relax', 'comm_stay_head': 'Resorts & Inns', 'comm_stay_text': 'Padre Garcia offers various accommodations...',
-        'comm_fin_title': 'Financial Infrastructure', 'comm_fin_text': 'To support the high volume of trade...'
+        'comm_dine_title': 'Featured Establishments', 'comm_stay_title': 'Stay & Relax', 'comm_stay_head': 'Resorts & Inns', 'comm_stay_text': 'Padre Garcia offers various accommodations...',
+        'comm_fin_title': 'Financial Infrastructure', 'comm_fin_text': 'To support the high volume of trade...',
+        'comm_fac_title': 'Public Facilities', 'comm_fac_sub': 'Our Infrastructure', 'comm_fac_desc': 'Essential amenities.',
+        'comm_dept_title': 'Department Stores', 'comm_dept_head': 'Shopping & Retail', 'comm_dept_text': 'Explore major retail centers.',
+        'comm_cult_title': 'Cultural Properties', 'comm_cult_sub': 'Our Heritage', 'comm_cult_desc': 'Preserved landmarks.',
+        # Map Footer Defaults
+        'comm_cuisine_map_title': 'Establishments Map', 'comm_cuisine_map_subtitle': 'Municipality of Padre Garcia', 'comm_cuisine_map_note': 'Map displays verified commercial and dining establishments.', 'comm_cuisine_map_source': 'BPLO Records', 'comm_cuisine_map_disclaimer': 'Locations are indicative.',
+        'comm_stay_map_title': 'Accommodations Map', 'comm_stay_map_subtitle': 'Municipality of Padre Garcia', 'comm_stay_map_note': 'Map displays accredited resorts and inns.', 'comm_stay_map_source': 'Tourism Office', 'comm_stay_map_disclaimer': 'Booking in advance recommended.',
+        'comm_dept_map_title': 'Department Stores Map', 'comm_dept_map_subtitle': 'Municipality of Padre Garcia', 'comm_dept_map_note': 'Retail hubs and department stores.', 'comm_dept_map_source': 'BPLO Records', 'comm_dept_map_disclaimer': 'Approximate locations.',
+        'comm_fac_map_title': 'Public Facilities Map', 'comm_fac_map_subtitle': 'Municipality of Padre Garcia', 'comm_fac_map_note': 'Health units and government offices.', 'comm_fac_map_source': 'Municipal Engineering', 'comm_fac_map_disclaimer': 'See footer for hotlines.',
+        'comm_cult_map_title': 'Cultural Properties Map', 'comm_cult_map_subtitle': 'Municipality of Padre Garcia', 'comm_cult_map_note': 'Significant historical sites.', 'comm_cult_map_source': 'Tourism Office', 'comm_cult_map_disclaimer': 'Preserved landmarks.'
     }
-    content = {}
-    for k, v in defaults.items(): content[k] = get_content(k, v)
+    content = {k: get_content(k, v) for k, v in defaults.items()}
+    # Logos and insets for map board logic
+    for k in ['attr_map_logo1', 'attr_map_logo2', 'attr_map_logo3', 'attr_map_logo4', 'attr_map_inset1', 'attr_map_inset2']: content[k] = get_content(k, '')
     
-    establishments = CommercialEstablishment.query.order_by(CommercialEstablishment.id.desc()).all()
-    accommodations = Accommodation.query.order_by(Accommodation.id.desc()).all()
-    banks = FinancialInstitution.query.order_by(FinancialInstitution.id.desc()).all()
-    
-    return render_template("edit_commerce.html", content=content, establishments=establishments, accommodations=accommodations, banks=banks)
-
+    return render_template("edit_commerce.html", content=content, cultural_props=CulturalProperty.query.order_by(CulturalProperty.id.desc()).all(), establishments=CommercialEstablishment.query.order_by(CommercialEstablishment.id.desc()).all(), accommodations=Accommodation.query.order_by(Accommodation.id.desc()).all(), banks=FinancialInstitution.query.order_by(FinancialInstitution.id.desc()).all(), facilities=Facility.query.order_by(Facility.id.desc()).all(), department_stores=DepartmentStore.query.order_by(DepartmentStore.id.desc()).all())
 
 @views.route("/edit-attractions", methods=["GET", "POST"])
 @login_required
 def edit_attractions():
-    if not current_user.is_admin: return redirect(url_for("views.home"))
-    
+    if not current_user.is_admin: 
+        return redirect(url_for("views.home"))
+
+    ALLOWED_TAGS = [
+        'h2', 'h3', 'p', 'div', 'span', 'ul', 'ol', 'li', 'img', 'br', 'strong', 'em', 'a'
+    ]
+    ALLOWED_ATTRIBUTES = {
+        'img': ['src', 'alt', 'class', 'style'],
+        'div': ['class', 'style'],
+        'span': ['class', 'style'],
+        'a': ['href', 'target', 'class']
+    }
+
     if request.method == "POST":
+        # Get and sanitize full_content safely only during POST requests
+        raw_content = request.form.get("attr_full_content")
+        clean_content = ""
+        if raw_content is not None:
+            clean_content = bleach.clean(raw_content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES)
         
         # --- Handle Main Attraction Edits ---
         if "add_attr" in request.form:
@@ -1730,7 +2220,9 @@ def edit_attractions():
                 description=request.form.get("attr_desc"), 
                 location=request.form.get("attr_loc"),
                 map_url=request.form.get("attr_map"), 
-                full_content=request.form.get("attr_full_content"),
+                full_content=clean_content, # Uses the sanitized clean_content
+                lat=float(request.form.get("attr_lat")) if request.form.get("attr_lat") else None,
+                lng=float(request.form.get("attr_lng")) if request.form.get("attr_lng") else None,
                 media_url=save_file(request.files.get("attr_media")) if request.files.get("attr_media") else None
             )
             db.session.add(new_attr)
@@ -1745,20 +2237,17 @@ def edit_attractions():
             attr.description = request.form.get("attr_desc")
             attr.location = request.form.get("attr_loc")
             attr.map_url = request.form.get("attr_map")
-            attr.full_content = request.form.get("attr_full_content")
+            attr.full_content = clean_content # Uses the sanitized clean_content
+            
+            attr.lat = float(request.form.get("attr_lat")) if request.form.get("attr_lat") else None
+            attr.lng = float(request.form.get("attr_lng")) if request.form.get("attr_lng") else None
             
             file = request.files.get("attr_media")
             if file and file.filename != '': 
                 attr.media_url = save_file(file)
+                
             db.session.commit()
             flash("Attraction details updated!", "success")
-            return redirect(url_for("views.edit_attractions"))
-
-        if "delete_attr" in request.form:
-            attr = MajorAttraction.query.get_or_404(request.form.get("attr_id"))
-            db.session.delete(attr)
-            db.session.commit()
-            flash("Attraction deleted.", "success")
             return redirect(url_for("views.edit_attractions"))
 
         # --- Handle Gallery Media Upload (Images/Videos) ---
@@ -1812,7 +2301,6 @@ def edit_attractions():
             media_id = request.form.get("media_id")
             media_item = AttractionMedia.query.get_or_404(media_id)
             
-            # Optional: Delete the actual file from the server
             try:
                 if media_item.media_url:
                     file_path = os.path.join(current_app.root_path, media_item.media_url)
@@ -1827,25 +2315,38 @@ def edit_attractions():
             return redirect(url_for("views.edit_attractions"))
 
         # --- Static Content Handler ---
-        fields = ['attr_hero_title', 'attr_hero_sub', 'attr_hero_desc']
+        fields = [
+            'attr_hero_title', 'attr_hero_sub', 'attr_hero_desc', 
+            'attr_map_title', 'attr_map_municipality', 'attr_map_province',
+            'attr_map_note', 'attr_map_source', 'attr_map_disclaimer'
+        ]
+
         for field in fields:
             val = request.form.get(field)
             if val is not None:
                 existing = SiteContent.query.filter_by(key=field).first()
+                if existing: existing.value = val
+                else: db.session.add(SiteContent(key=field, value=val))
+
+        img_map = {
+            'attr_hero_bg': 'attr_hero_bg_file',
+            'attr_map_inset1': 'attr_map_inset1_file',
+            'attr_map_inset2': 'attr_map_inset2_file',
+            'attr_map_logo1': 'attr_map_logo1_file',
+            'attr_map_logo2': 'attr_map_logo2_file',
+            'attr_map_logo3': 'attr_map_logo3_file',
+            'attr_map_logo4': 'attr_map_logo4_file'
+        }
+
+        for db_key, form_name in img_map.items():
+            file = request.files.get(form_name)
+            if file and file.filename != '':
+                path = save_file(file)
+                existing = SiteContent.query.filter_by(key=db_key).first()
                 if existing: 
-                    existing.value = val
+                    existing.value = path
                 else: 
-                    db.session.add(SiteContent(key=field, value=val))
-                
-        # Handle file upload for static content
-        file = request.files.get("attr_hero_bg_file")
-        if file and file.filename != '':
-            path = save_file(file)
-            existing = SiteContent.query.filter_by(key="attr_hero_bg").first()
-            if existing: 
-                existing.value = path
-            else: 
-                db.session.add(SiteContent(key="attr_hero_bg", value=path))
+                    db.session.add(SiteContent(key=db_key, value=path))
                 
         db.session.commit()
         flash("Attractions Page static content updated!", "success")
@@ -1856,10 +2357,24 @@ def edit_attractions():
         'attr_hero_title': 'Major Attractions', 
         'attr_hero_sub': 'Pride of the Town', 
         'attr_hero_desc': 'From our economic heart to our natural wonders.', 
-        'attr_hero_bg': url_for('static', filename='images/cattle_market.jpg')
+        'attr_hero_bg': url_for('static', filename='images/cattle_market.jpg'),
+        'attr_map_sub': 'Explore our local attractions on the map',
+        'attr_map_title': 'TOURIST ATTRACTIONS MAP',
+        'attr_map_municipality': 'MUNICIPALITY OF PADRE GARCIA',
+        'attr_map_province': 'PROVINCE OF BATANGAS',
+        'attr_map_note': '',
+        'attr_map_source': '',
+        'attr_map_disclaimer': '',
+        'attr_map_inset1': '',
+        'attr_map_inset2': '',
+        'attr_map_logo1': '',
+        'attr_map_logo2': '',
+        'attr_map_logo3': '',
+        'attr_map_logo4': ''
     }
     content = {}
-    for k, v in defaults.items(): content[k] = get_content(k, v)
+    for k, v in defaults.items(): 
+        content[k] = get_content(k, v)
     
     attractions_list = MajorAttraction.query.order_by(MajorAttraction.id.desc()).all()
     
@@ -1872,48 +2387,64 @@ def edit_culture():
         return redirect(url_for("views.home"))
 
     if request.method == "POST":
-        # 1. List ALL text-based fields including the NEW repositioning (pos) fields
+        # 1. HANDLE TEXT-BASED FIELDS
         fields = [
             'cult_hero_title', 'cult_hero_sub', 'cult_hero_tag',
             'cult_church_title', 'cult_old_lbl', 'cult_new_lbl',
             'cult_hist_title', 'cult_hist_text', 'cult_arch_title', 'cult_arch_text',
             'cult_patron_title', 'cult_patron_sub', 'cult_patron_text',
             'cult_mon_title', 'cult_mon_sub',
-            'cult_m1_name', 'cult_m1_desc', 'cult_m1_pos', # Added pos
-            'cult_m2_name', 'cult_m2_desc', 'cult_m2_pos', # Added pos
-            'cult_m3_name', 'cult_m3_desc', 'cult_m3_pos'  # Added pos
+            'cult_m1_name', 'cult_m1_desc', 'cult_m1_pos',
+            'cult_m2_name', 'cult_m2_desc', 'cult_m2_pos',
+            'cult_m3_name', 'cult_m3_desc', 'cult_m3_pos'
         ]
 
-        # 2. Loop through and save each field to the SiteContent table
         for field in fields:
             val = request.form.get(field)
             if val is not None:
                 existing = SiteContent.query.filter_by(key=field).first()
-                if existing: 
-                    existing.value = val
-                else: 
-                    db.session.add(SiteContent(key=field, value=val))
+                if existing: existing.value = val
+                else: db.session.add(SiteContent(key=field, value=val))
 
-        # 3. Handle Image Uploads
-        img_fields = [
-            'cult_hero_bg', 'cult_old_img', 'cult_new_img', 'cult_patron_img',
-            'cult_m1_img', 'cult_m2_img', 'cult_m3_img'
-        ]
+        # 2. HANDLE IMAGE UPLOADS
+        img_fields = ['cult_hero_bg', 'cult_old_img', 'cult_new_img', 'cult_patron_img',
+                      'cult_m1_img', 'cult_m2_img', 'cult_m3_img']
         for field in img_fields:
             file = request.files.get(field + "_file")
             if file and file.filename != '':
                 path = save_file(file)
                 existing = SiteContent.query.filter_by(key=field).first()
-                if existing: 
-                    existing.value = path
-                else: 
-                    db.session.add(SiteContent(key=field, value=path))
+                if existing: existing.value = path
+                else: db.session.add(SiteContent(key=field, value=path))
+
+        # 3. HANDLE DOWNLOADABLE FILE UPLOAD
+        if "add_culture_file" in request.form:
+            files = request.files.getlist("culture_docs")
+            caption = request.form.get("file_caption")
+            for file in files:
+                if file and file.filename != '':
+                    path = save_file(file)
+                    new_media = HistoryMedia(
+                        section_key='culture_downloads',
+                        media_url=path,
+                        media_type='file',
+                        caption=caption
+                    )
+                    db.session.add(new_media)
+            flash("Resources uploaded successfully.", "success")
+
+        # 4. HANDLE FILE DELETION
+        if "delete_culture_file" in request.form:
+            media_id = request.form.get("media_id")
+            media_item = HistoryMedia.query.get_or_404(media_id)
+            db.session.delete(media_item)
+            flash("File deleted.", "success")
 
         db.session.commit()
         flash("Culture Page updated successfully!", "success")
         return redirect(url_for("views.edit_culture"))
 
-    # --- GET REQUEST (Retrieving data for the editor) ---
+    # --- GET REQUEST ---
     defaults = {
         'cult_hero_title': 'Cultural Inventory', 
         'cult_hero_sub': 'The sacred sites...', 
@@ -1934,16 +2465,19 @@ def edit_culture():
         'cult_patron_text': 'The image...',
         'cult_mon_title': 'Historical Monuments', 
         'cult_mon_sub': 'Honoring Pillars',
-        'cult_m1_name': 'Padre Vicente Garcia', 'cult_m1_desc': 'A Filipino priest...', 'cult_m1_img': url_for('static', filename='images/monument_vicente.jpg'), 'cult_m1_pos': '50',
-        'cult_m2_name': 'Hon. Graciano R. Recto', 'cult_m2_desc': 'First Mayor...', 'cult_m2_img': url_for('static', filename='images/monument_recto.jpg'), 'cult_m2_pos': '50',
-        'cult_m3_name': 'Father Antonio', 'cult_m3_desc': 'Religious figure...', 'cult_m3_img': url_for('static', filename='images/monument_antonio.jpg'), 'cult_m3_pos': '50'
+        'cult_m1_name': 'Padre Vicente Garcia', 'cult_m1_desc': '...', 'cult_m1_img': '', 'cult_m1_pos': '50',
+        'cult_m2_name': 'Hon. Graciano R. Recto', 'cult_m2_desc': '...', 'cult_m2_img': '', 'cult_m2_pos': '50',
+        'cult_m3_name': 'Father Antonio', 'cult_m3_desc': '...', 'cult_m3_img': '', 'cult_m3_pos': '50'
     }
     
     content = {}
     for k, v in defaults.items(): 
         content[k] = get_content(k, v)
         
-    return render_template("edit_cultural_inventory.html", content=content)
+    # Fetch the downloadable files
+    culture_files = HistoryMedia.query.filter_by(section_key='culture_downloads').all()
+        
+    return render_template("edit_cultural_inventory.html", content=content, culture_files=culture_files)
 
 @views.route("/edit-festival", methods=["GET", "POST"])
 @login_required
@@ -1953,23 +2487,37 @@ def edit_festival():
     if request.method == "POST":
         
         if "add_event" in request.form:
+            file = request.files.get("ev_img")
+            img_path = save_file(file) if file else None
+            
             new_event = FestivalEvent(
-                month=request.form.get("ev_month"), day=request.form.get("ev_day"), 
-                title=request.form.get("ev_title"), location=request.form.get("ev_loc"), 
-                description=request.form.get("ev_desc")
+                month=request.form.get("ev_month"), 
+                day=request.form.get("ev_day"), 
+                title=request.form.get("ev_title"), 
+                location=request.form.get("ev_loc"), 
+                description=request.form.get("ev_desc"),
+                image_url=img_path # Save image
             )
             db.session.add(new_event)
             db.session.commit()
-            flash("Event added successfully!", "success")
+            flash("Activity added!", "success")
             return redirect(url_for("views.edit_festival"))
             
         if "edit_event" in request.form:
             ev = FestivalEvent.query.get(request.form.get("event_id"))
             if ev:
-                ev.month, ev.day, ev.title = request.form.get("ev_month"), request.form.get("ev_day"), request.form.get("ev_title")
-                ev.location, ev.description = request.form.get("ev_loc"), request.form.get("ev_desc")
+                ev.month = request.form.get("ev_month")
+                ev.day = request.form.get("ev_day")
+                ev.title = request.form.get("ev_title")
+                ev.location = request.form.get("ev_loc")
+                ev.description = request.form.get("ev_desc")
+                
+                file = request.files.get("ev_img")
+                if file and file.filename != '':
+                    ev.image_url = save_file(file)
+                
                 db.session.commit()
-                flash("Event updated!", "success")
+                flash("Activity updated!", "success")
             return redirect(url_for("views.edit_festival"))
             
         if "delete_event" in request.form:

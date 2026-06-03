@@ -20,6 +20,7 @@
             <i class="ri-add-circle-line text-green-600"></i> Add New Spot
         </h3>
         <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="add_spot" value="true">
             <div>
                 <label class="text-xs font-bold uppercase text-slate-500 mb-1 block">Name</label>
@@ -64,6 +65,7 @@
 
                     <!-- DELETE BUTTON -->
                     <form method="POST" onsubmit="return confirm('Delete this spot?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="delete_spot" value="true">
                         <input type="hidden" name="spot_id" value="{{ spot.id }}">
                         <button class="bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-600 transition" title="Delete">
@@ -104,6 +106,7 @@
         </div>
         
         <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="edit_spot" value="true">
             <input type="hidden" id="edit_spot_id" name="spot_id" value="">
             

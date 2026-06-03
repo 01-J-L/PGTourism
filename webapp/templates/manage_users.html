@@ -32,6 +32,7 @@
                     <i class="ri-user-add-line text-green-600"></i> Create Sub-Admin
                 </h3>
                 <form method="POST" class="space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="add_sub_admin" value="true">
                     
                     <div>
@@ -103,6 +104,7 @@
                                         <!-- Delete Button -->
                                         {% if u.id != current_user.id %}
                                         <form method="POST" onsubmit="return confirm('Delete {{ u.email }}? This cannot be undone.');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="delete_user" value="true">
                                             <input type="hidden" name="user_id" value="{{ u.id }}">
                                             <button type="submit" class="text-red-600 hover:text-white hover:bg-red-600 border border-red-200 w-8 h-8 rounded flex items-center justify-center transition" title="Delete User">
@@ -137,6 +139,7 @@
         </h3>
         
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="edit_user" value="true">
             <input type="hidden" id="editUserId" name="user_id" value="">
             
@@ -175,6 +178,7 @@
         <p class="text-sm text-slate-500 mb-4">Set new password for <span id="passUserEmail" class="font-bold text-slate-700"></span></p>
         
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="change_password" value="true">
             <input type="hidden" id="passUserId" name="user_id" value="">
             

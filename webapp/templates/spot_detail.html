@@ -77,10 +77,7 @@
                     <i class="ri-arrow-left-line group-hover:-translate-x-1 transition-transform"></i> Return to Directory
                 </a>
                 
-                <!-- Print icon -->
-                <div class="flex gap-4 text-slate-400">
-                    <button onclick="window.print()" class="hover:text-slate-800 transition" title="Print Record"><i class="ri-printer-line text-lg"></i></button>
-                </div>
+                
             </div>
 
             <!-- MEDIA CONTAINER (Image or Video) -->
@@ -138,7 +135,7 @@
                 <div class="flex gap-4 w-full sm:w-auto">
                     {% if spot.link_url and spot.link_url != '#' %}
                     <a href="{{ spot.link_url }}" target="_blank" class="flex-1 sm:flex-none inline-flex justify-center items-center gap-2 bg-primary hover:bg-blue-800 text-white px-8 py-3.5 rounded-lg text-xs font-bold uppercase tracking-widest transition shadow-lg hover:shadow-xl">
-                        Official Website <i class="ri-external-link-line"></i>
+                        Official Link <i class="ri-external-link-line"></i>
                     </a>
                     {% endif %}
                 </div>

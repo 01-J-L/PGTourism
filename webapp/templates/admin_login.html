@@ -35,6 +35,7 @@
 
         <!-- IMPORTANT: No action="" means it posts to current URL (/admin@login) -->
         <form method="POST" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label class="block text-slate-300 text-xs font-bold uppercase mb-2">Admin ID</label>
                 <div class="relative">

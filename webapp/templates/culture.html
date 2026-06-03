@@ -66,6 +66,25 @@
         background: #57534e;
         border-radius: 3px;
     }
+    .magazine-text {
+        column-count: 1;
+        column-gap: 3rem;
+    }
+    @media (min-width: 768px) {
+        .magazine-text {
+            column-count: 2;
+        }
+    }
+    .magazine-text::first-letter {
+        font-family: 'Cinzel', serif;
+        font-size: 4rem;
+        font-weight: 900;
+        color: #991b1b; /* text-red-800 */
+        float: left;
+        line-height: 0.8;
+        margin-right: 0.5rem;
+        margin-top: 0.3rem;
+    }
 </style>
 {% endblock %}
 
@@ -142,27 +161,99 @@
             </div>
         </div>
 
-        <!-- MAMA MARY SPOTLIGHT -->
-        <div class="flex flex-col md:flex-row items-center gap-10 bg-blue-900 text-white rounded-2xl overflow-hidden shadow-2xl"
-            data-aos="zoom-in">
-            <div class="w-full md:w-1/3 h-96 relative cursor-pointer group"
-                onclick="openImageModal('{{ url_for('static', filename=content.cult_patron_img.replace('static/', '')) if 'static/uploads' in content.cult_patron_img else content.cult_patron_img }}')">
-                <img src="{{ url_for('static', filename=content.cult_patron_img.replace('static/', '')) if 'static/uploads' in content.cult_patron_img else content.cult_patron_img }}"
-                    class="w-full h-full object-cover group-hover:scale-105 transition duration-700">
-                <div class="absolute inset-0 bg-gradient-to-t from-blue-900 to-transparent"></div>
-                <div class="hover-zoom-icon"><i class="ri-zoom-in-line text-white text-3xl"></i></div>
-            </div>
-            <div class="w-full md:w-2/3 p-8 md:p-12">
-                <h3 class="text-3xl font-bold serif-title text-yellow-400 mb-4">{{ content.cult_patron_title }}</h3>
-                <p class="text-blue-100 leading-relaxed text-lg serif-text italic mb-6">{{ content.cult_patron_sub }}
-                </p>
-                <p class="text-blue-200 leading-relaxed text-justify whitespace-pre-wrap">{{ content.cult_patron_text }}
-                </p>
+        <!-- === MAMA MARY SPOTLIGHT (Magazine Layout) === -->
+        <div class="py-16 mt-8" data-aos="fade-up">
+            <div class="max-w-6xl mx-auto">
+                
+                <!-- Thick Magazine Borders -->
+                <div class="border-t-[6px] border-b-[6px] border-stone-800 py-12 md:py-16 relative">
+                    
+                    <!-- Top Block: Title & Image -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 mb-12 shadow-2xl group cursor-pointer bg-stone-100" 
+                         onclick="openImageModal('{{ url_for('static', filename=content.cult_patron_img.replace('static/', '')) if 'static/uploads' in content.cult_patron_img else content.cult_patron_img }}')">
+                        
+                        <!-- Left: Colored Title Block -->
+                        <div class="bg-red-800 p-8 md:p-12 lg:p-16 flex flex-col justify-center text-white relative overflow-hidden">
+                            <!-- Subtle texture overlay -->
+                            <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+                            
+                            <h3 class="relative z-10 text-4xl md:text-5xl lg:text-6xl font-black uppercase leading-none tracking-tight mb-6 font-sans">
+                                {{ content.cult_patron_title }}
+                            </h3>
+                            <div class="relative z-10 w-16 h-1 bg-white/50 mb-6"></div>
+                            <p class="relative z-10 text-white/90 text-sm md:text-base leading-relaxed font-medium">
+                                "{{ content.cult_patron_sub }}"
+                            </p>
+                        </div>
+                        
+                        <!-- Right: Image -->
+                        <div class="h-80 lg:h-auto min-h-[400px] relative overflow-hidden">
+                            <img src="{{ url_for('static', filename=content.cult_patron_img.replace('static/', '')) if 'static/uploads' in content.cult_patron_img else content.cult_patron_img }}" 
+                                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-700">
+                            <!-- Lightbox Zoom Icon -->
+                            <div class="hover-zoom-icon"><i class="ri-zoom-in-line text-white text-4xl drop-shadow-lg"></i></div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Block: Article Body -->
+                    <div class="max-w-5xl mx-auto px-4 lg:px-8">
+                        
+                        <!-- Red Sub-headline to transition into text -->
+                        <h4 class="text-xl md:text-2xl font-bold text-red-800 mb-6 italic font-serif leading-snug border-l-4 border-red-800 pl-4">
+                            The beloved patroness of the municipality, a symbol of unwavering faith and devotion for the people of Padre Garcia.
+                        </h4>
+                        
+                        <!-- 2-Column Magazine Text Format -->
+                        <div class="magazine-text text-stone-700 text-justify leading-relaxed whitespace-pre-wrap font-serif text-lg">
+                            {{- content.cult_patron_text -}}
+                        </div>
+                        
+                    </div>
+
+                </div>
             </div>
         </div>
 
+        <!-- Downloadable Resources Section -->
+        {% if culture_files %}
+        <div class="mt-16 bg-white p-8 md:p-12 rounded-xl shadow-xl border-t-4 border-emerald-500" data-aos="fade-up">
+            <h3 class="text-2xl font-bold text-stone-800 serif-title mb-6 flex items-center gap-3">
+                <i class="ri-download-cloud-2-line text-emerald-600"></i> Downloadable Resources
+            </h3>
+            <div class="flex flex-col gap-4">
+                {% for file in culture_files %}
+                <a href="{{ url_for('views.download_watermarked', filename=file.media_url.replace('static/',''), dl=1) }}"
+                    class="flex items-center justify-between bg-slate-50 border border-slate-200 p-4 rounded-xl hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md transition duration-300 group">
+
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-3xl text-emerald-600 group-hover:bg-white group-hover:shadow-sm transition">
+                            <!-- This filter uses your existing 'get_file_icon' filter from views.py -->
+                            <i class="{{ file.media_url | get_file_icon }}"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 group-hover:text-emerald-700 transition">
+                                {{ file.caption or file.media_url.split('/')[-1].split('_', 1)[-1] }}
+                            </h4>
+                            <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">
+                                {{ file.media_url.split('.')[-1] }} Document
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bg-emerald-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md group-hover:bg-emerald-700 group-hover:scale-110 transition duration-300 shrink-0">
+                        <i class="ri-download-2-line"></i>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 </section>
+
 
 <!-- === SECTION 2: MONUMENTS (WITH REPOSITIONING) === -->
 <section class="py-20 bg-stone-900 text-stone-100">
