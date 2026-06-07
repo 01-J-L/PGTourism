@@ -57,6 +57,32 @@
             </div>
         </div>
 
+        <!-- Background Music Configurations -->
+        <div class="border-t border-slate-100 pt-6">
+            <label class="text-xs font-bold uppercase text-slate-500 mb-2 block">Home Page Background Music</label>
+            <input type="file" name="bg_music_file" id="musicInput" accept="audio/*" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+            
+            <div id="musicPreviewContainer" class="mt-4 p-4 border rounded-lg bg-slate-50 space-y-4">
+                {% if content.bg_music_path %}
+                    <div class="flex items-center gap-3">
+                        <i class="ri-music-2-fill text-2xl text-blue-600"></i>
+                        <span class="text-xs text-slate-600 truncate flex-1">Active File: {{ content.bg_music_path.split('/')[-1] }}</span>
+                    </div>
+                    <audio id="musicPreviewElement" src="{{ url_for('static', filename=content.bg_music_path.replace('static/', '')) if 'static/uploads' in content.bg_music_path else content.bg_music_path }}" controls class="w-full h-8"></audio>
+                {% else %}
+                    <p id="musicPlaceholderText" class="text-slate-400 text-xs text-center py-2">No background music file uploaded yet.</p>
+                {% endif %}
+            </div>
+
+            <div class="mt-4">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="text-xs font-bold uppercase text-slate-500">Default Music Volume</label>
+                    <span id="volumeValue" class="text-xs font-bold text-blue-600">{{ (content.bg_music_volume | float * 100) | int }}%</span>
+                </div>
+                <input type="range" name="bg_music_volume" id="volumeSlider" min="0" max="1" step="0.05" value="{{ content.bg_music_volume }}" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+            </div>
+        </div>
+
         <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm w-full">Save Changes</button>
     </form>
 </div>
@@ -114,6 +140,45 @@
             p.className = 'text-xs text-slate-400 mt-2';
             p.innerText = 'New Video Selected (Unsaved)';
             ctaContainer.appendChild(p);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Volume Slider Indicator
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeValue = document.getElementById('volumeValue');
+    volumeSlider.addEventListener('input', function() {
+        volumeValue.textContent = Math.round(this.value * 100) + '%';
+        const previewAudio = document.getElementById('musicPreviewElement');
+        if (previewAudio) {
+            previewAudio.volume = this.value;
+        }
+    });
+
+    // Preview Handler for Music File
+    const musicInput = document.getElementById('musicInput');
+    const musicContainer = document.getElementById('musicPreviewContainer');
+    musicInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        musicContainer.innerHTML = '';
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-3';
+            div.innerHTML = `
+                <i class="ri-music-2-fill text-2xl text-green-600"></i>
+                <span class="text-xs text-slate-600 truncate flex-1">Selected File: ${file.name} (Unsaved)</span>
+            `;
+            musicContainer.appendChild(div);
+
+            const audio = document.createElement('audio');
+            audio.src = event.target.result;
+            audio.controls = true;
+            audio.className = 'w-full h-8 mt-2';
+            audio.volume = volumeSlider.value;
+            musicContainer.appendChild(audio);
         };
         reader.readAsDataURL(file);
     });

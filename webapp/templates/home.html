@@ -325,6 +325,19 @@
     function openHeroVideoModal() {
         const modal = document.getElementById('heroVideoModal');
         const video = document.getElementById('heroPopupVideo');
+        const bgAudio = document.getElementById('bgAudio');
+        
+        // Pause background music if it is currently playing
+        if (bgAudio && !bgAudio.paused) {
+            window.musicWasPlayingBeforeVideo = true;
+            bgAudio.pause();
+            if (typeof window.updateMusicUI === 'function') {
+                window.updateMusicUI(false);
+            }
+        } else {
+            window.musicWasPlayingBeforeVideo = false;
+        }
+
         modal.classList.remove('hidden');
         setTimeout(() => {
             modal.classList.remove('opacity-0');
@@ -336,11 +349,23 @@
     function closeHeroVideoModal() {
         const modal = document.getElementById('heroVideoModal');
         const video = document.getElementById('heroPopupVideo');
+        const bgAudio = document.getElementById('bgAudio');
+        
         modal.classList.add('opacity-0');
         if (video) {
             video.pause();
             video.currentTime = 0;
         }
+
+        // Resume background music only if it was playing before opening the video
+        if (bgAudio && window.musicWasPlayingBeforeVideo) {
+            bgAudio.play().then(() => {
+                if (typeof window.updateMusicUI === 'function') {
+                    window.updateMusicUI(true);
+                }
+            }).catch(err => console.log("Audio playback failed to resume:", err));
+        }
+
         setTimeout(() => {
             modal.classList.add('hidden');
             document.body.style.overflow = '';
@@ -358,4 +383,100 @@
     });
 </script>
 {% endif %}
+
+<!-- BACKGROUND MUSIC MODULE -->
+{% if content.bg_music_path %}
+<audio id="bgAudio" loop>
+    <source src="{{ url_for('static', filename=content.bg_music_path.replace('static/', '')) if 'static/uploads' in content.bg_music_path else content.bg_music_path }}" type="audio/mpeg">
+</audio>
+
+<!-- Floating Audio Controller Button -->
+<div class="fixed bottom-6 left-6 z-[90]" data-aos="fade-right">
+    <button id="musicToggleBtn" class="w-12 h-12 rounded-full bg-slate-900/90 text-white border-2 border-white/20 hover:border-yellow-500 shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 focus:outline-none" title="Mute/Play Background Music">
+        <i id="musicIcon" class="ri-music-2-line text-xl text-slate-400"></i>
+    </button>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const audio = document.getElementById('bgAudio');
+        const toggleBtn = document.getElementById('musicToggleBtn');
+        const musicIcon = document.getElementById('musicIcon');
+
+        if (!audio || !toggleBtn) return;
+
+        // Fetch configurable settings
+        const configVolume = parseFloat("{{ content.bg_music_volume | default('0.5') }}");
+        audio.volume = configVolume;
+
+        // Check user mute preference
+        const musicIsMuted = localStorage.getItem('bg_music_muted') === 'true';
+
+        function updateUI(isPlaying) {
+            if (isPlaying && !audio.muted) {
+                musicIcon.className = "ri-volume-up-fill text-xl text-yellow-500";
+                toggleBtn.classList.remove('border-white/20');
+                toggleBtn.classList.add('border-yellow-500');
+            } else {
+                musicIcon.className = "ri-volume-mute-line text-xl text-slate-400";
+                toggleBtn.classList.remove('border-yellow-500');
+                toggleBtn.classList.add('border-white/20');
+            }
+        }
+
+        // Expose UI update function globally for modal integration
+        window.updateMusicUI = updateUI;
+
+        // Try playing the audio on load
+        if (!musicIsMuted) {
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    updateUI(true);
+                }).catch(error => {
+                    // Autoplay blocked by browser. Set up automated listeners for standard page interactions.
+                    const startAudioImplicitly = () => {
+                        if (audio.paused && localStorage.getItem('bg_music_muted') !== 'true') {
+                            audio.play().then(() => {
+                                updateUI(true);
+                            }).catch(err => console.log("Implicit playback prevented:", err));
+                        }
+                        
+                        // Safely remove listeners once playback is initiated
+                        interactionEvents.forEach(event => {
+                            document.removeEventListener(event, startAudioImplicitly);
+                        });
+                    };
+
+                    const interactionEvents = ['click', 'touchstart', 'scroll', 'mousemove', 'keydown'];
+                    interactionEvents.forEach(event => {
+                        document.addEventListener(event, startAudioImplicitly, { once: true, passive: true });
+                    });
+                });
+            }
+        } else {
+            updateUI(false);
+        }
+
+        // Manual button toggles
+        toggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (audio.paused) {
+                audio.muted = false;
+                audio.play().then(() => {
+                    localStorage.setItem('bg_music_muted', 'false');
+                    updateUI(true);
+                });
+            } else {
+                audio.pause();
+                localStorage.setItem('bg_music_muted', 'true');
+                updateUI(false);
+            }
+        });
+    });
+</script>
+{% endif %}
+
+
+
 {% endblock %}

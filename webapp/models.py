@@ -255,3 +255,22 @@ class CharterStep(db.Model):
     fees_to_pay = db.Column(db.String(150), nullable=True, default="None")
     processing_time = db.Column(db.String(150), nullable=True)
     person_responsible = db.Column(db.String(150), nullable=True)
+
+
+class WebsiteView(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime(timezone=True), server_default=func.now(), index=True)
+
+class OfficialCategory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    order = db.Column(db.Integer, default=0)
+    members = db.relationship('OfficialMember', backref='category', lazy=True, cascade="all, delete-orphan")
+
+class OfficialMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('official_category.id'), nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    title = db.Column(db.String(250), nullable=False)
+    image_url = db.Column(db.String(500), nullable=True)
+    order = db.Column(db.Integer, default=0)

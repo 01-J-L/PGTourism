@@ -16,6 +16,12 @@ fix_db.py
 
 # If you make local database backups:
 *.sql
+*.db
+dev.db
+*.db
+.env
+static/uploads/
+instance/
 
 # 1. Undo your last commit but keep your changes on your disk
 git reset --soft HEAD~1

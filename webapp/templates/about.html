@@ -169,9 +169,179 @@
                     {{ content.vision_text }}
                 </p>
             </div>
+            
         </div>
     </div>
 </section>
+
+{% if categories %}
+<section class="py-20 bg-slate-50 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-6">
+        
+        {% for cat in categories %}
+        {% if cat.members %}
+        <div class="mb-20 last:mb-0 relative" data-aos="fade-up">
+            
+            <!-- Category Header -->
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-slate-800 tracking-tight">{{ cat.name }}</h2>
+                <div class="h-1 w-16 bg-primary mx-auto mt-3 rounded-full"></div>
+            </div>
+
+            <!-- Carousel Wrapper for Category Members -->
+            <div class="relative w-full overflow-hidden px-4 md:px-12">
+                
+                <div id="carousel-wrapper-{{ cat.id }}" class="flex transition-transform duration-500 ease-out gap-6 py-4 overflow-x-auto no-scrollbar scroll-smooth">
+                    {% for mem in cat.members|sort(attribute='order') %}
+                    <!-- Updated with cursor pointer, transition properties, and interactive parameters -->
+                    <div onclick="openMemberDetailModal(this)" 
+                         data-name="{{ mem.name | escape }}" 
+                         data-title="{{ mem.title | escape }}" 
+                         data-img="{% if mem.image_url %}{{ url_for('static', filename=mem.image_url.replace('static/', '')) }}{% else %}{% endif %}"
+                         class="min-w-[260px] max-w-[280px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col items-center justify-center text-center shrink-0 cursor-pointer hover:border-indigo-400 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 group">
+                        
+                        <!-- Profile Image Frame -->
+                        <div class="w-32 h-32 rounded-full border-4 border-slate-100 p-1 mb-4 bg-slate-50 overflow-hidden shadow-inner shrink-0 group-hover:border-indigo-100 transition duration-300">
+                            {% if mem.image_url %}
+                                <img src="{{ url_for('static', filename=mem.image_url.replace('static/', '')) }}" class="w-full h-full rounded-full object-cover" alt="{{ mem.name }}">
+                            {% else %}
+                                <div class="w-full h-full rounded-full bg-slate-200 flex items-center justify-center text-slate-400 text-3xl">
+                                    <i class="ri-user-line"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Info -->
+                        <h4 class="font-bold text-slate-800 text-base mb-2 uppercase leading-snug group-hover:text-primary transition duration-300">{{ mem.name }}</h4>
+                        <p class="text-xs text-blue-800 font-semibold tracking-wide uppercase leading-relaxed max-w-[220px]">{{ mem.title }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Slider Actions -->
+                <button onclick="scrollContainer('carousel-wrapper-{{ cat.id }}', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 text-slate-800 w-10 h-10 rounded-full shadow-lg border border-slate-200 hover:bg-slate-100 flex items-center justify-center transition z-20">
+                    <i class="ri-arrow-left-s-line text-2xl"></i>
+                </button>
+                <button onclick="scrollContainer('carousel-wrapper-{{ cat.id }}', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 text-slate-800 w-10 h-10 rounded-full shadow-lg border border-slate-200 hover:bg-slate-100 flex items-center justify-center transition z-20">
+                    <i class="ri-arrow-right-s-line text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+    </div>
+</section>
+
+<!-- ==============================================
+     MEMBER DETAIL POP-OUT MODAL
+=============================================== -->
+<div id="memberDetailModal" class="fixed inset-0 z-[9999] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-opacity duration-300 opacity-0" onclick="closeMemberDetailModal()">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-slate-200 relative text-slate-800 flex flex-col transform scale-95 transition-transform duration-300" onclick="event.stopPropagation()">
+        
+        <!-- Close Action Button -->
+        <button onclick="closeMemberDetailModal()" class="absolute top-4 right-4 z-50 text-slate-400 hover:text-slate-600 transition bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center focus:outline-none">
+            <i class="ri-close-line text-2xl"></i>
+        </button>
+
+        <div class="p-8 text-center flex flex-col items-center relative overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+            <!-- Dynamic Profile Frame -->
+            <div class="w-40 h-40 rounded-full border-4 border-indigo-500 p-1 mb-6 shadow-xl bg-slate-100 overflow-hidden shrink-0">
+                <img id="detailModalImg" src="" class="w-full h-full rounded-full object-cover bg-slate-200" alt="Profile headshot">
+                <div id="detailModalPlaceholder" class="w-full h-full rounded-full bg-slate-200 flex items-center justify-center text-slate-400 text-5xl hidden">
+                    <i class="ri-user-line"></i>
+                </div>
+            </div>
+
+            <!-- Member Information Details -->
+            <h3 id="detailModalName" class="text-2xl font-bold font-sans text-slate-900 uppercase leading-snug mb-3"></h3>
+            <div class="h-1 w-12 bg-indigo-500 rounded-full mb-4"></div>
+            <p id="detailModalTitle" class="text-xs text-blue-800 font-bold uppercase tracking-wider leading-relaxed max-w-[280px]"></p>
+        </div>
+        
+    </div>
+</div>
+
+<script>
+    // Smooth scrolling mechanism for the directory carousels
+    function scrollContainer(containerId, direction) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            const scrollOffset = 300; 
+            container.scrollBy({
+                left: direction * scrollOffset,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    // Modal Control Operations
+    function openMemberDetailModal(element) {
+        const name = element.getAttribute('data-name');
+        const title = element.getAttribute('data-title');
+        const img = element.getAttribute('data-img');
+
+        document.getElementById('detailModalName').innerText = name;
+        document.getElementById('detailModalTitle').innerText = title;
+
+        const modalImg = document.getElementById('detailModalImg');
+        const placeholder = document.getElementById('detailModalPlaceholder');
+
+        if (img && img.trim() !== '') {
+            modalImg.src = img;
+            modalImg.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        } else {
+            modalImg.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+        }
+
+        const modal = document.getElementById('memberDetailModal');
+        const modalContent = modal.querySelector('div');
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modalContent.classList.remove('scale-95');
+        }, 10);
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMemberDetailModal() {
+        const modal = document.getElementById('memberDetailModal');
+        const modalContent = modal.querySelector('div');
+
+        modal.classList.add('opacity-0');
+        modalContent.classList.add('scale-95');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }, 300);
+    }
+
+    // Global Key Listener for modal close on ESC press
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('memberDetailModal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closeMemberDetailModal();
+            }
+        }
+    });
+</script>
+
+<style>
+    /* Hide scrollbar utility for Webkit/Firefox */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+{% endif %}
 
 <!-- TOURISM GROWTH CHART SECTION -->
 {% if content.about_chart_path %}

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_file, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_file, abort, Response, jsonify
 from flask_login import login_required, current_user
 from flask_mail import Message
 from werkzeug.utils import secure_filename
@@ -10,8 +10,10 @@ import uuid
 import io
 import datetime 
 import tempfile
-import re # Added for ordinance sorting
+import re 
 import bleach
+import zipfile
+import shutil
 
 from docx2pdf import convert
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
@@ -29,7 +31,7 @@ from sqlalchemy import or_
 from . import db, mail, limiter
 
 # Update this line to include all your models
-from .models import User, SiteContent, TouristSpot, Ordinance, SocialLink, FooterLink, EmergencyHotline, Mayor, Barangay, FestivalEvent, CommercialEstablishment, Accommodation, FinancialInstitution, MajorAttraction, FoodDish, SweetTreat, FestivalGalleryImage, AttractionMedia, HistoryMedia, BuildingImage, Event, Facility, DepartmentStore, CulturalProperty, CharterService, CharterRequirement, CharterStep
+from .models import User, SiteContent, TouristSpot, Ordinance, SocialLink, FooterLink, EmergencyHotline, Mayor, Barangay, FestivalEvent, CommercialEstablishment, Accommodation, FinancialInstitution, MajorAttraction, FoodDish, SweetTreat, FestivalGalleryImage, AttractionMedia, HistoryMedia, BuildingImage, Event, Facility, DepartmentStore, CulturalProperty, CharterService, CharterRequirement, CharterStep, WebsiteView, OfficialCategory, OfficialMember
 
 views = Blueprint("views", __name__)
 
@@ -96,11 +98,11 @@ def get_font(font_size):
             continue
     return ImageFont.load_default()
 
-def save_file(file):
+def save_file(file, watermark=True):
     """
     Saves the uploaded file.
     CRITICAL: If the file is an image, it immediately bakes a "Padre Garcia Tourism"
-    watermark into the bottom right corner.
+    watermark into the bottom right corner unless watermark is set to False.
     """
     if not file or file.filename == '':
         return None
@@ -111,12 +113,12 @@ def save_file(file):
     
     ext = filename.split('.')[-1].lower()
     
-    # Apply baked-in watermark for Images
-    if ext in ['jpg', 'jpeg', 'png']:
+    # Apply baked-in watermark for Images if requested
+    if ext in ['jpg', 'jpeg', 'png'] and watermark:
         try:
             img = Image.open(file.stream).convert("RGBA")
-            watermark = Image.new("RGBA", img.size, (255, 255, 255, 0))
-            draw = ImageDraw.Draw(watermark)
+            watermark_img = Image.new("RGBA", img.size, (255, 255, 255, 0))
+            draw = ImageDraw.Draw(watermark_img)
             
             text = "Padre Garcia Tourism"
             font_size = max(int(img.width * 0.035), 14) # ~3.5% of image width
@@ -140,7 +142,7 @@ def save_file(file):
             
             draw.text((x, y), text, font=font, fill=(255, 255, 255, 240))
             
-            out = Image.alpha_composite(img, watermark)
+            out = Image.alpha_composite(img, watermark_img)
             
             if ext in ['jpg', 'jpeg']:
                 out = out.convert("RGB")
@@ -167,6 +169,9 @@ def get_common_content():
 
     return {
         'site_logo': get_content('site_logo', ''), 
+        'header_bg_type': get_content('header_bg_type', 'color'),
+        'header_bg_color': get_content('header_bg_color', '#0f172a'),
+        'header_bg_image': get_content('header_bg_image', ''),
         'footer_brand_title': get_content('footer_brand_title', 'Tourism Padre Garcia'),
         'footer_brand_desc': get_content('footer_brand_desc', 'Promoting the culture and heritage of the Cattle Trading Capital.'),
         'footer_links_title': get_content('footer_links_title', 'Quick Links'),
@@ -181,6 +186,22 @@ def get_common_content():
         'hotlines_list': hotlines
     }
 
+# =========================================
+#             CONTEXT PROCESSORS
+# =========================================
+
+@views.app_context_processor
+def inject_global_content():
+    """
+    Globally injects the base site content dictionary into every template context,
+    preventing UndefinedErrors on pages that do not explicitly pass 'content'.
+    """
+    try:
+        return dict(content=get_common_content())
+    except Exception:
+        # Fallback empty dictionary in case database migrations or initialization are pending
+        return dict(content={})
+
 # ==========================================
 #               PUBLIC ROUTES
 # ==========================================
@@ -193,7 +214,7 @@ def home():
         'hero_title_2': get_content('hero_title_2', 'Garcia'),
         'hero_subtitle': get_content('hero_subtitle', 'Discover the rich heritage and vibrant culture of the Cattle Trading Capital.'),
         'hero_image': get_content('hero_image_path', url_for('static', filename='images/municipal.jpg')),
-        'hero_cta_video_path': get_content('hero_cta_video_path', ''), # Added for CTA pop-out video
+        'hero_cta_video_path': get_content('hero_cta_video_path', ''), 
         'about_title': get_content('about_title', 'Where Tradition Meets Progress'),
         'about_text': get_content('about_text', 'Known as the Cattle Trading Capital of the Philippines, Padre Garcia is a thriving municipality in Batangas.'),
         'about_image': get_content('about_image_path', url_for('static', filename='images/municipal2.jpg')),
@@ -206,6 +227,9 @@ def home():
         'travel_title_3': get_content('travel_title_3', 'Where to Stay'),
         'travel_text_3': get_content('travel_text_3', 'We have local inns and resorts within the town proper.'),
         'travel_link_3': get_content('travel_link_3', ''),
+        # --- BACKGROUND MUSIC SETTINGS ---
+        'bg_music_path': get_content('bg_music_path', ''),
+        'bg_music_volume': get_content('bg_music_volume', '0.5'),
     })
     page = request.args.get('page', 1, type=int)
     spots = TouristSpot.query.order_by(TouristSpot.order).paginate(page=page, per_page=8, error_out=False)
@@ -317,9 +341,9 @@ def about():
         'about_hero_sub': get_content('about_hero_sub', 'Discover the history, culture, and vision behind the Cattle Trading Capital.'),
         'about_intro_badge': get_content('about_intro_badge', 'About Padre Garcia'),
         'about_title': get_content('about_title', 'Where Tradition Meets Progress'),
-        'about_text': get_content('about_text', 'Known as the Cattle Trading Capital of the Philippines...'),
+        'about_text': get_content('about_text', 'Known as the Cattle Trading Capital of the Philippines, Padre Garcia is a thriving municipality in Batangas.'),
         'about_image': get_content('about_image_path', url_for('static', filename='images/municipal2.jpg')),
-        'about_chart_path': get_content('about_chart_path', ''), # Added for the Chart
+        'about_chart_path': get_content('about_chart_path', ''), 
         'about_img_caption': get_content('about_img_caption', '"A community bound by faith, hard work, and unity."'),
         'about_feat1_title': get_content('about_feat1_title', 'Rich History'),
         'about_feat1_desc': get_content('about_feat1_desc', 'Established 1949'),
@@ -340,7 +364,123 @@ def about():
         'about_cta_title': get_content('about_cta_title', 'Experience the Warmth of Padre Garcia'),
         'about_cta_text': get_content('about_cta_text', 'Whether you are here for business, cattle trading, or leisure, our town welcomes you with open arms.'),
     })
-    return render_template("about.html", content=content)
+    
+    # Query categories and members mapped with ordering
+    categories = OfficialCategory.query.order_by(OfficialCategory.order.asc(), OfficialCategory.id.asc()).all()
+    
+    return render_template("about.html", content=content, categories=categories)
+
+# ==========================================
+#         SYSTEM BACKUP & RESTORE ROUTE
+# ==========================================
+@views.route("/manage-backup", methods=["GET", "POST"])
+@login_required
+def manage_backup():
+    if not current_user.is_super_admin:
+        flash("Unauthorized. Only Super Administrators can perform backup/restore procedures.", "error")
+        return redirect(url_for("views.dashboard"))
+
+    db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
+    is_sqlite = db_uri.startswith('sqlite:///')
+    
+    # Resolve SQLite database file location
+    db_path = None
+    if is_sqlite:
+        db_filename = db_uri.replace('sqlite:///', '')
+        paths_to_try = [
+            os.path.join(current_app.instance_path, db_filename),
+            os.path.join(current_app.root_path, '..', db_filename),
+            os.path.join(current_app.root_path, db_filename),
+            db_filename
+        ]
+        for path in paths_to_try:
+            if os.path.exists(path):
+                db_path = path
+                break
+
+    if request.method == "POST":
+        # --- COMMAND A: CREATE SYSTEM ARCHIVE ZIP ---
+        if "create_backup" in request.form:
+            try:
+                temp_dir = tempfile.gettempdir()
+                backup_filename = f"padre_garcia_backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                backup_path = os.path.join(temp_dir, backup_filename)
+                
+                with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    # 1. Safe copy & archive of SQLite database file
+                    if db_path and os.path.exists(db_path):
+                        temp_db = os.path.join(temp_dir, "backup_db_temp.db")
+                        shutil.copy2(db_path, temp_db)
+                        zip_file.write(temp_db, arcname="database.db")
+                        os.remove(temp_db)
+                    
+                    # 2. Archive of upload folder assets
+                    upload_folder = current_app.config['UPLOAD_FOLDER']
+                    if os.path.exists(upload_folder):
+                        for root, dirs, files in os.walk(upload_folder):
+                            for file in files:
+                                file_path = os.path.join(root, file)
+                                archive_name = os.path.join("uploads", os.path.relpath(file_path, upload_folder))
+                                zip_file.write(file_path, arcname=archive_name)
+                
+                return send_file(backup_path, as_attachment=True, download_name=backup_filename)
+            except Exception as e:
+                current_app.logger.error(f"Backup execution failed: {e}")
+                flash(f"System backup failed: {e}", "error")
+            return redirect(url_for("views.manage_backup"))
+
+        # --- COMMAND B: RESTORE FROM UPLOADED ZIP ---
+        if "restore_backup" in request.form:
+            file = request.files.get("backup_file")
+            if not file or file.filename == '':
+                flash("Please upload a valid system backup zip archive.", "error")
+                return redirect(url_for("views.manage_backup"))
+            
+            try:
+                temp_dir = tempfile.gettempdir()
+                zip_path = os.path.join(temp_dir, "restore_temp.zip")
+                file.save(zip_path)
+                
+                if not zipfile.is_zipfile(zip_path):
+                    flash("Invalid archive structure. The file uploaded is not a zip package.", "error")
+                    return redirect(url_for("views.manage_backup"))
+                    
+                with zipfile.ZipFile(zip_path, 'r') as zip_file:
+                    file_list = zip_file.namelist()
+                    
+                    # 1. Overwrite SQLite database file
+                    if "database.db" in file_list:
+                        if db_path:
+                            # Close database engine connections to release lock handles
+                            db.session.remove()
+                            db.get_engine().dispose()
+                            
+                            zip_file.extract("database.db", temp_dir)
+                            shutil.copy2(os.path.join(temp_dir, "database.db"), db_path)
+                            os.remove(os.path.join(temp_dir, "database.db"))
+                        else:
+                            flash("Direct DB restoring is limited to SQLite. Other engines must be restored manually.", "warning")
+                    
+                    # 2. Restore Uploaded files directory
+                    upload_folder = current_app.config['UPLOAD_FOLDER']
+                    os.makedirs(upload_folder, exist_ok=True)
+                    for item in file_list:
+                        if item.startswith("uploads/") and not item.endswith("/"):
+                            relative_path = item.replace("uploads/", "")
+                            destination_path = os.path.join(upload_folder, relative_path)
+                            os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+                            
+                            with zip_file.open(item) as src, open(destination_path, "wb") as dest:
+                                shutil.copyfileobj(src, dest)
+                                
+                os.remove(zip_path)
+                flash("System files and records restored successfully.", "success")
+            except Exception as e:
+                current_app.logger.error(f"System recovery failed: {e}")
+                flash(f"System restoration failed: {e}", "error")
+            return redirect(url_for("views.manage_backup"))
+
+    return render_template("manage_backup.html", is_sqlite=is_sqlite, db_path=db_path)
 
 @views.route("/download/<path:filename>")
 def download_watermarked(filename):
@@ -1238,7 +1378,7 @@ def dashboard():
 def edit_home_hero():
     if not current_user.is_admin: return redirect(url_for("views.home"))
     if request.method == "POST":
-        fields = ['hero_title_1', 'hero_title_2', 'hero_subtitle']
+        fields = ['hero_title_1', 'hero_title_2', 'hero_subtitle', 'bg_music_volume']
         for field in fields:
             val = request.form.get(field)
             if val is not None:
@@ -1261,6 +1401,14 @@ def edit_home_hero():
             existing_cta = SiteContent.query.filter_by(key='hero_cta_video_path').first()
             if existing_cta: existing_cta.value = path_cta
             else: db.session.add(SiteContent(key='hero_cta_video_path', value=path_cta))
+
+        # Save Background Music file
+        music_file = request.files.get("bg_music_file")
+        if music_file and music_file.filename != '':
+            path_music = save_file(music_file)
+            existing_music = SiteContent.query.filter_by(key='bg_music_path').first()
+            if existing_music: existing_music.value = path_music
+            else: db.session.add(SiteContent(key='bg_music_path', value=path_music))
         
         db.session.commit()
         flash("Home Hero updated!", "success")
@@ -1271,7 +1419,9 @@ def edit_home_hero():
         'hero_title_2': get_content('hero_title_2', 'Garcia'),
         'hero_subtitle': get_content('hero_subtitle', 'Discover the rich heritage...'),
         'hero_image': get_content('hero_image_path', url_for('static', filename='images/municipal.jpg')),
-        'hero_cta_video_path': get_content('hero_cta_video_path', '') # Passed to form template
+        'hero_cta_video_path': get_content('hero_cta_video_path', ''),
+        'bg_music_path': get_content('bg_music_path', ''),
+        'bg_music_volume': get_content('bg_music_volume', '0.5')
     }
     return render_template("edit_home_hero.html", content=content)
 
@@ -1281,9 +1431,10 @@ def edit_header():
     if not current_user.is_admin: return redirect(url_for("views.home"))
     
     if request.method == "POST":
+        # Action 1: Website Logo Upload (Watermarking disabled for branding assets)
         file = request.files.get("site_logo_file")
         if file and file.filename != '':
-            path = save_file(file)
+            path = save_file(file, watermark=False)
             existing = SiteContent.query.filter_by(key='site_logo').first()
             if existing: 
                 existing.value = path
@@ -1294,8 +1445,48 @@ def edit_header():
             flash("Website Logo updated successfully!", "success")
             return redirect(url_for("views.edit_header"))
             
+        # Action 2: Update Header Background configurations
+        if "save_header_bg" in request.form:
+            bg_type = request.form.get("header_bg_type", "color")
+            bg_color = request.form.get("header_bg_color", "#0f172a")
+            
+            # Save Background Type choice
+            existing_type = SiteContent.query.filter_by(key='header_bg_type').first()
+            if existing_type: existing_type.value = bg_type
+            else: db.session.add(SiteContent(key='header_bg_type', value=bg_type))
+            
+            # Save Color Choice value
+            existing_color = SiteContent.query.filter_by(key='header_bg_color').first()
+            if existing_color: existing_color.value = bg_color
+            else: db.session.add(SiteContent(key='header_bg_color', value=bg_color))
+            
+            # Save Background Image file if uploaded (Watermarking disabled)
+            file_bg = request.files.get("header_bg_file")
+            if file_bg and file_bg.filename != '':
+                path_bg = save_file(file_bg, watermark=False)
+                existing_bg = SiteContent.query.filter_by(key='header_bg_image').first()
+                if existing_bg: existing_bg.value = path_bg
+                else: db.session.add(SiteContent(key='header_bg_image', value=path_bg))
+                
+            db.session.commit()
+            flash("Header background settings updated successfully!", "success")
+            return redirect(url_for("views.edit_header"))
+
+        # Action 3: Reset background configurations to solid Slate defaults
+        if "reset_bg" in request.form:
+            for key in ['header_bg_type', 'header_bg_color', 'header_bg_image']:
+                item = SiteContent.query.filter_by(key=key).first()
+                if item:
+                    db.session.delete(item)
+            db.session.commit()
+            flash("Header settings reverted back to default parameters.", "success")
+            return redirect(url_for("views.edit_header"))
+            
     content = {
-        'site_logo': get_content('site_logo', '')
+        'site_logo': get_content('site_logo', ''),
+        'header_bg_type': get_content('header_bg_type', 'color'),
+        'header_bg_color': get_content('header_bg_color', '#0f172a'),
+        'header_bg_image': get_content('header_bg_image', '')
     }
     return render_template("edit_header.html", content=content)
 
@@ -1460,6 +1651,181 @@ def check_maintenance():
     if current_user.is_authenticated and current_user.is_super_admin:
         return None
     return redirect(url_for('views.maintenance'))
+
+# ==========================================
+#         VISITOR VIEW TRACKING HOOK
+# ==========================================
+@views.before_app_request
+def track_visitor():
+    # Exclude non-GET requests, static files, and admin actions
+    if request.method != 'GET':
+        return
+    
+    if request.endpoint:
+        if 'static' in request.endpoint:
+            return
+        # Skip count if visiting admin/management interfaces
+        admin_endpoints = ['dashboard', 'edit_', 'manage_', 'site_settings', 'auth.', 'check_maintenance', 'maintenance', 'download']
+        if any(x in request.endpoint for x in admin_endpoints):
+            return
+
+    try:
+        # Check if tracking setting is turned on (defaults to true)
+        tracking_setting = SiteContent.query.filter_by(key='track_views_enabled').first()
+        is_enabled = (tracking_setting.value == 'true') if tracking_setting else True
+        
+        if is_enabled:
+            new_view = WebsiteView()
+            db.session.add(new_view)
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error logging visitor view: {e}")
+
+# ==========================================
+#           ADMIN ANALYTICS ROUTE
+# ==========================================
+@views.route("/manage-analytics", methods=["GET", "POST"])
+@login_required
+def manage_analytics():
+    if not current_user.is_admin:
+        return redirect(url_for("views.home"))
+
+    # Handle control commands (Stop / Continue counting)
+    if request.method == "POST":
+        if "toggle_tracking" in request.form:
+            status = request.form.get("tracking_status")  # 'true' or 'false'
+            setting = SiteContent.query.filter_by(key='track_views_enabled').first()
+            if setting:
+                setting.value = status
+            else:
+                db.session.add(SiteContent(key='track_views_enabled', value=status))
+            db.session.commit()
+            flash(f"Website tracking has been {'enabled' if status == 'true' else 'disabled'}.", "success")
+        return redirect(url_for("views.manage_analytics"))
+
+    # Fetch configuration
+    tracking_setting = SiteContent.query.filter_by(key='track_views_enabled').first()
+    is_enabled = tracking_setting.value if tracking_setting else 'true'
+
+    # Total hits counter
+    total_views = WebsiteView.query.count()
+
+    # Parse custom range filters (GET query parameters)
+    from_date_str = request.args.get('from_date', '').strip()
+    to_date_str = request.args.get('to_date', '').strip()
+
+    now = datetime.datetime.now()
+    default_from = now - datetime.timedelta(days=30)
+    default_to = now
+
+    from_date = default_from
+    to_date = default_to
+
+    if from_date_str:
+        try:
+            from_date = datetime.datetime.strptime(from_date_str, '%Y-%m-%d')
+        except ValueError:
+            from_date_str = ""
+    if to_date_str:
+        try:
+            to_date = datetime.datetime.strptime(to_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+        except ValueError:
+            to_date_str = ""
+
+    active_from_str = from_date_str if from_date_str else from_date.strftime('%Y-%m-%d')
+    active_to_str = to_date_str if to_date_str else to_date.strftime('%Y-%m-%d')
+
+    # Query filtered hit counts within specific date range
+    filtered_views = WebsiteView.query.filter(
+        WebsiteView.timestamp >= from_date,
+        WebsiteView.timestamp <= to_date
+    ).count()
+
+    # Dynamic CSV Export Execution
+    if request.args.get('export') == 'csv':
+        import csv
+        views_list = WebsiteView.query.filter(
+            WebsiteView.timestamp >= from_date,
+            WebsiteView.timestamp <= to_date
+        ).order_by(WebsiteView.timestamp.asc()).all()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Record ID', 'Timestamp (Server Time/UTC)'])
+        for v in views_list:
+            writer.writerow([v.id, v.timestamp.strftime('%Y-%m-%d %H:%M:%S')])
+        
+        response = Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-disposition": f"attachment; filename=website_views_{active_from_str}_to_{active_to_str}.csv"}
+        )
+        return response
+
+    # Aggregate metric structures (Sliding windows for Chart.js)
+    day_labels = []
+    day_data = []
+    for i in range(6, -1, -1):
+        day = now - datetime.timedelta(days=i)
+        start_of_day = datetime.datetime(day.year, day.month, day.day, 0, 0, 0)
+        end_of_day = datetime.datetime(day.year, day.month, day.day, 23, 59, 59)
+        count = WebsiteView.query.filter(WebsiteView.timestamp >= start_of_day, WebsiteView.timestamp <= end_of_day).count()
+        day_labels.append(day.strftime("%b %d"))
+        day_data.append(count)
+
+    week_labels = []
+    week_data = []
+    for i in range(7, -1, -1):
+        target_week = now - datetime.timedelta(weeks=i)
+        start_week = target_week - datetime.timedelta(days=target_week.weekday())
+        start_week_dt = datetime.datetime(start_week.year, start_week.month, start_week.day, 0, 0, 0)
+        end_week_dt = start_week_dt + datetime.timedelta(days=6, hours=23, minutes=59, seconds=59)
+        count = WebsiteView.query.filter(WebsiteView.timestamp >= start_week_dt, WebsiteView.timestamp <= end_week_dt).count()
+        week_labels.append(f"Wk {start_week.strftime('%W (%b %d)')}")
+        week_data.append(count)
+
+    month_labels = []
+    month_data = []
+    for i in range(11, -1, -1):
+        year_offset = (now.month - i - 1) // 12
+        month_idx = (now.month - i - 1) % 12 + 1
+        year_idx = now.year + year_offset
+        
+        start_month = datetime.datetime(year_idx, month_idx, 1, 0, 0, 0)
+        if month_idx == 12:
+            end_month = datetime.datetime(year_idx + 1, 1, 1, 0, 0, 0) - datetime.timedelta(seconds=1)
+        else:
+            end_month = datetime.datetime(year_idx, month_idx + 1, 1, 0, 0, 0) - datetime.timedelta(seconds=1)
+        
+        count = WebsiteView.query.filter(WebsiteView.timestamp >= start_month, WebsiteView.timestamp <= end_month).count()
+        month_labels.append(start_month.strftime("%b %Y"))
+        month_data.append(count)
+
+    year_labels = []
+    year_data = []
+    for i in range(4, -1, -1):
+        year_val = now.year - i
+        start_year = datetime.datetime(year_val, 1, 1, 0, 0, 0)
+        end_year = datetime.datetime(year_val, 12, 31, 23, 59, 59)
+        count = WebsiteView.query.filter(WebsiteView.timestamp >= start_year, WebsiteView.timestamp <= end_year).count()
+        year_labels.append(str(year_val))
+        year_data.append(count)
+
+    analytics_data = {
+        'day': {'labels': day_labels, 'data': day_data},
+        'week': {'labels': week_labels, 'data': week_data},
+        'month': {'labels': month_labels, 'data': month_data},
+        'year': {'labels': year_labels, 'data': year_data}
+    }
+
+    return render_template("manage_analytics.html", 
+                           is_enabled=is_enabled, 
+                           total_views=total_views, 
+                           analytics_data=analytics_data,
+                           filtered_views=filtered_views,
+                           active_from_str=active_from_str,
+                           active_to_str=active_to_str)
 
 @views.route("/maintenance")
 def maintenance():
@@ -1648,7 +2014,85 @@ def edit_about():
     if not current_user.is_admin: return redirect(url_for("views.home"))
     
     if request.method == "POST":
-        # Handle all text fields
+        # --- SUB-ACTION 1: ADD CATEGORY ---
+        if "add_category" in request.form:
+            name = request.form.get("cat_name")
+            order_val = int(request.form.get("cat_order", 0))
+            if name:
+                db.session.add(OfficialCategory(name=name, order=order_val))
+                db.session.commit()
+                flash("New directory category added successfully!", "success")
+            return redirect(url_for("views.edit_about"))
+
+        # --- SUB-ACTION 2: EDIT CATEGORY ---
+        if "edit_category" in request.form:
+            cat = OfficialCategory.query.get(request.form.get("cat_id"))
+            if cat:
+                cat.name = request.form.get("cat_name")
+                cat.order = int(request.form.get("cat_order", 0))
+                db.session.commit()
+                flash("Category details updated successfully!", "success")
+            return redirect(url_for("views.edit_about"))
+
+        # --- SUB-ACTION 3: DELETE CATEGORY ---
+        if "delete_category" in request.form:
+            cat = OfficialCategory.query.get(request.form.get("cat_id"))
+            if cat:
+                db.session.delete(cat)
+                db.session.commit()
+                flash("Category and all belonging members deleted.", "success")
+            return redirect(url_for("views.edit_about"))
+
+        # --- SUB-ACTION 4: ADD MEMBER ---
+        if "add_member" in request.form:
+            cat_id = request.form.get("category_id")
+            name = request.form.get("mem_name")
+            title = request.form.get("mem_title")
+            order_val = int(request.form.get("mem_order", 0))
+            
+            file = request.files.get("mem_image")
+            img_path = save_file(file, watermark=False) if file else None # Avoid watermarking headshots
+            
+            if cat_id and name:
+                new_mem = OfficialMember(
+                    category_id=cat_id,
+                    name=name,
+                    title=title,
+                    image_url=img_path,
+                    order=order_val
+                )
+                db.session.add(new_mem)
+                db.session.commit()
+                flash("New member added to the directory!", "success")
+            return redirect(url_for("views.edit_about"))
+
+        # --- SUB-ACTION 5: EDIT MEMBER ---
+        if "edit_member" in request.form:
+            mem = OfficialMember.query.get(request.form.get("mem_id"))
+            if mem:
+                mem.category_id = request.form.get("category_id")
+                mem.name = request.form.get("mem_name")
+                mem.title = request.form.get("mem_title")
+                mem.order = int(request.form.get("mem_order", 0))
+                
+                file = request.files.get("mem_image")
+                if file and file.filename != '':
+                    mem.image_url = save_file(file, watermark=False)
+                    
+                db.session.commit()
+                flash("Member details updated successfully!", "success")
+            return redirect(url_for("views.edit_about"))
+
+        # --- SUB-ACTION 6: DELETE MEMBER ---
+        if "delete_member" in request.form:
+            mem = OfficialMember.query.get(request.form.get("mem_id"))
+            if mem:
+                db.session.delete(mem)
+                db.session.commit()
+                flash("Member removed from directory.", "success")
+            return redirect(url_for("views.edit_about"))
+
+        # --- STANDARD TEXT AND STATIC PAGE FIELDS ---
         fields = [
             'about_hero_badge', 'about_hero_h1', 'about_hero_sub',
             'about_intro_badge', 'about_title', 'about_text', 'about_img_caption',
@@ -1669,7 +2113,7 @@ def edit_about():
                 if existing: existing.value = val
                 else: db.session.add(SiteContent(key=field, value=val))
         
-        # Handle Main Featured Image
+        # Featured Image
         file = request.files.get("about_image_file")
         if file and file.filename != '':
             path = save_file(file)
@@ -1677,7 +2121,7 @@ def edit_about():
             if existing: existing.value = path
             else: db.session.add(SiteContent(key='about_image_path', value=path))
 
-        # Handle Tourism Arrivals Chart Image (NEW)
+        # Tourism Arrivals Chart
         chart_file = request.files.get("about_chart_file")
         if chart_file and chart_file.filename != '':
             chart_path = save_file(chart_file)
@@ -1691,7 +2135,7 @@ def edit_about():
         flash("About Page updated successfully!", "success")
         return redirect(url_for("views.edit_about"))
 
-    # GET Request: Load current data
+    # GET REQUEST
     content = {
         'about_hero_badge': get_content('about_hero_badge', 'Welcome to Our Town'),
         'about_hero_h1': get_content('about_hero_h1', 'Our Story & Heritage'),
@@ -1700,7 +2144,7 @@ def edit_about():
         'about_title': get_content('about_title', 'Where Tradition Meets Progress'),
         'about_text': get_content('about_text', 'Known as the Cattle Trading Capital...'),
         'about_image_path': get_content('about_image_path', url_for('static', filename='images/municipal2.jpg')),
-        'about_chart_path': get_content('about_chart_path', ''), # Added for the Chart
+        'about_chart_path': get_content('about_chart_path', ''), 
         'about_img_caption': get_content('about_img_caption', '"A community bound by faith, hard work, and unity."'),
         'about_feat1_title': get_content('about_feat1_title', 'Rich History'),
         'about_feat1_desc': get_content('about_feat1_desc', 'Established 1949'),
@@ -1721,7 +2165,9 @@ def edit_about():
         'about_cta_title': get_content('about_cta_title', 'Experience the Warmth of Padre Garcia'),
         'about_cta_text': get_content('about_cta_text', 'Whether you are here for business, cattle trading...'),
     }
-    return render_template("about_us_edit.html", content=content)
+
+    categories = OfficialCategory.query.order_by(OfficialCategory.order.asc(), OfficialCategory.id.asc()).all()
+    return render_template("about_us_edit.html", content=content, categories=categories)
 
 # ==========================================
 #               ADMIN ROUTES
